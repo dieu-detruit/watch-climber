@@ -86,10 +86,10 @@ brain-dumpの構成を参考に、実際に利用するApple Developerチーム�
 
 以下は残りの設定手順です。作成済みの登録は再作成しません。
 
-1. [Apple DeveloperのIdentifiers](https://developer.apple.com/account/resources/identifiers/list)で配布コンテナ用・Watch用のExplicit App IDを確認。受領済みIDの用途を確定してから不足分を設定。Watch側は心拍用のHealthKitを有効化。
+1. [Apple DeveloperのIdentifiers](https://developer.apple.com/account/resources/identifiers/list)で配布コンテナ用・Watch用のExplicit App IDを確認。不足分がある場合のみ設定。Watch側は心拍用のHealthKitを有効化。
 2. [App Store Connect](https://appstoreconnect.apple.com/apps)の作成済みアプリ（ID `6820979760`）でBundle IDを確認し、配布コンテナと一致させます。Watch-onlyもプラットフォームはiOS扱いです。
 3. TestFlightの内部グループ `Internal` を作り、自分を追加。
-4. Codemagicでbrain-dumpの有効なApple Distribution証明書を利用。上の2つのApp IDに対応するApp Store配布プロファイルを作成・取得。環境変数グループ `watch-climber` に `APP_BUNDLE_ID`、`WATCH_BUNDLE_ID` と既存チームの `APPLE_TEAM_ID` を設定。
+4. Codemagicでbrain-dumpの有効なApple Distribution証明書を利用。上の2つのApp IDに対応するApp Store配布プロファイルを作成・取得。環境変数グループ `watch-climber` に既存チームの `APPLE_TEAM_ID` を設定。2つのBundle IDは `codemagic.yaml` に設定済みです。
 5. WatchとペアリングしているiPhoneにTestFlightをインストール。
 
 App Store ConnectのURLは受領済みです。Bundle IDの対応は確定済みです。残りは署名設定の確認です。API秘密鍵はCodemagicの連携設定で保持します。
@@ -107,14 +107,14 @@ App Store ConnectのURLは受領済みです。Bundle IDの対応は確定済み
 `codemagic.yaml` はbrain-dumpのXcodeGen→署名→TestFlight構成を踏襲しています。
 
 1. リポジトリをCodemagicに接続し、`watch-simulator` でコンパイルと6件のネイティブテストを実行。
-2. `watch-climber` 環境変数グループに実際の `APP_BUNDLE_ID`（ASCコンテナ）、`WATCH_BUNDLE_ID`、`APPLE_TEAM_ID` を設定。両Bundle IDのApp StoreプロファイルとWatchのHealthKit capabilityが必要です。Watch IDを自動で推測・生成しません。
+2. `watch-climber` 環境変数グループに `APPLE_TEAM_ID` を設定（Bundle IDはYAMLに設定済み）。両Bundle IDのApp StoreプロファイルとWatchのHealthKit capabilityが必要です。Watch IDを自動で推測・生成しません。
 3. App Store Connect integrationは既存の `brain-dump` を参照。Codemagic上の接続名が異なる場合はこの名前を合わせます。
 4. `watch-testflight` を手動実行。生成アーカイブにWatch実行ファイルと地形JSONが入っていることを検査してからアップロードします。
 5. Appleの処理完了後、[TestFlight](https://appstoreconnect.apple.com/apps/6820979760/testflight)のInternalグループからiPhoneに配布し、Watchへインストール。
 
 最初の実機確認: 位置情報を許可→座標・精度が実際に更新される→記録画面で開始してヘルスケアを許可→数分歩いて消灯中も時間・軌跡が続く→一時停止・再開→終了。五竜以外では3D画面の「収録範囲外」が正常です。
 
-現在の検証状況: Webの29テストと本番ビルドは成功。ネイティブのソースレビュー、YAML/plist/shell構文確認は済んでいますが、このLinux環境にXcodeがないため、ネイティブコンパイル・署名アーカイブ・TestFlightへのアップロードはまだ実行していません。
+現在の検証状況: Webの29テストと本番ビルドは成功。GitHub ActionsのXcode 26.3でWatchアプリのコンパイル、6件のシミュレータテスト、実機向け署名なしアーカイブと地形同梱検査が成功しました（[実行結果](https://github.com/dieu-detruit/watch-climber/actions/runs/37940668317)）。署名付きIPAの作成とTestFlightへのアップロードは未実行です。
 
 設計と実装計画は`docs/superpowers/`にあります。
 
