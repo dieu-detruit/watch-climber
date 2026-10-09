@@ -5,7 +5,7 @@ final class ClimberTests: XCTestCase {
     func testActualDEMPixelCoordinates() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "goryu", withExtension: "json"))
         let terrain = try JSONDecoder().decode(Terrain.self, from: Data(contentsOf: url))
-        let world = 256.0 * pow(2, 14)
+        let world: Double = 256 * pow(2, 14)
         for (col, row) in [(0.0, 0.0), (223, 159), (100, 80), (111.25, 79.75)] {
             let lon = (14459 * 256 + col * 8 + 0.5) / world * 360 - 180
             let lat = atan(sinh(.pi * (1 - 2 * (6394 * 256 + row * 8 + 0.5) / world))) * 180 / .pi
