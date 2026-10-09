@@ -84,17 +84,17 @@ brain-dumpの構成を参考に、実際に利用するApple Developerチーム�
 - [App Store Connectのアプリ情報](https://appstoreconnect.apple.com/apps/6820979760/distribution/info)
 - 所有者の名前・Bundle ID接頭辞を開発環境のユーザー名から推測しない。
 
-以下は残りの設定手順です。作成済みの登録は再作成しません。
+配布は前回のbrain-dumpと同じGitHub Actions経路を使用します。CodemagicのWebサービスへの登録・操作は不要です。署名用の `codemagic-cli-tools` だけをGitHubのMac runner内で使用します。
 
-1. [Apple DeveloperのIdentifiers](https://developer.apple.com/account/resources/identifiers/list)で配布コンテナ用・Watch用のExplicit App IDを確認。不足分がある場合のみ設定。Watch側は心拍用のHealthKitを有効化。
-2. [App Store Connect](https://appstoreconnect.apple.com/apps)の作成済みアプリ（ID `6820979760`）でBundle IDを確認し、配布コンテナと一致させます。Watch-onlyもプラットフォームはiOS扱いです。
-3. TestFlightの内部グループ `Internal` を作り、自分を追加。
-4. Codemagicでbrain-dumpの有効なApple Distribution証明書を利用。上の2つのApp IDに対応するApp Store配布プロファイルを作成・取得。環境変数グループ `watch-climber` に既存チームの `APPLE_TEAM_ID` を設定。2つのBundle IDは `codemagic.yaml` に設定済みです。
-5. WatchとペアリングしているiPhoneにTestFlightをインストール。
+既存のApple APIキーと証明書用秘密鍵はbrain-dumpのGitHub Secretsにあります。再入力・別リポジトリへのコピーを避けるため、brain-dumpの専用ブランチ `ci/watch-climber-testflight` に配布ワークフローを置き、この公開リポジトリの確認済みコミットSHAを指定してビルドします。brain-dumpのmainや既存アプリの配布設定は変更しません。
 
-App Store ConnectのURLは受領済みです。Bundle IDの対応は確定済みです。残りは署名設定の確認です。API秘密鍵はCodemagicの連携設定で保持します。
+- [配布ワークフロー](https://github.com/dieu-detruit/brain-dump/blob/ci/watch-climber-testflight/.github/workflows/watch-climber-testflight.yml)
+- タグ `watch-climber-testflight-*` で起動。更新時はワークフロー内のcheckout SHAを確認済みコミットへ変更して新しいタグを作ります。
+- 配布対象はApp Store Connectの `6820979760` と一致することをAPIで確認します。
+- Watch側のHealthKit capability・両IDのプロファイル取得・署名・アップロードを自動実行します。
+- 秘密鍵や署名ファイルをartifactには保存しません。公開App Storeへの申請や外部ベータ審査は行いません。
 
-[Appleのアプリ登録手順](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app)・[Codemagicの署名手順](https://docs.codemagic.io/yaml-code-signing/signing-ios/)
+公開リポジトリの標準GitHub-hosted runnerは無料で利用できます。[GitHubの料金説明](https://docs.github.com/en/actions/concepts/billing-and-usage)
 
 ## 次の段階
 
@@ -104,18 +104,12 @@ App Store ConnectのURLは受領済みです。Bundle IDの対応は確定済み
 
 記録時間はGPS更新とは独立して加算します。GPS精度が50mを超える点は軌跡・集計に使わず、30秒以上の位置更新の空白、一時停止、再起動をまたいだ線を結びません。記録を約10秒ごとにDocumentsへatomic保存し、復元した記録は一時停止します。終了済みの記録はUUID別JSONでも保存します。初版には保存履歴の一覧やエクスポートUIはありません。再起動で途切れたHealthKitワークアウトを復元せず、再開時に新しいワークアウトを作ります。
 
-`codemagic.yaml` はbrain-dumpのXcodeGen→署名→TestFlight構成を踏襲しています。
-
-1. リポジトリをCodemagicに接続し、`watch-simulator` でコンパイルと6件のネイティブテストを実行。
-2. `watch-climber` 環境変数グループに `APPLE_TEAM_ID` を設定（Bundle IDはYAMLに設定済み）。両Bundle IDのApp StoreプロファイルとWatchのHealthKit capabilityが必要です。Watch IDを自動で推測・生成しません。
-3. App Store Connect integrationは既存の `brain-dump` を参照。Codemagic上の接続名が異なる場合はこの名前を合わせます。
-4. `watch-testflight` を手動実行。生成アーカイブにWatch実行ファイルと地形JSONが入っていることを検査してからアップロードします。
-5. Appleの処理完了後、[TestFlight](https://appstoreconnect.apple.com/apps/6820979760/testflight)のInternalグループからiPhoneに配布し、Watchへインストール。
+`codemagic.yaml` は任意の代替経路として残していますが、現在の配布には使用しません。GitHubの署名ワークフローが成功し、Appleの処理が完了したら、[TestFlight](https://appstoreconnect.apple.com/apps/6820979760/testflight)の内部テストからWatchへインストールします。
 
 最初の実機確認: 位置情報を許可→座標・精度が実際に更新される→記録画面で開始してヘルスケアを許可→数分歩いて消灯中も時間・軌跡が続く→一時停止・再開→終了。五竜以外では3D画面の「収録範囲外」が正常です。
 
-現在の検証状況: Webの29テストと本番ビルドは成功。GitHub ActionsのXcode 26.3でWatchアプリのコンパイル、6件のシミュレータテスト、実機向け署名なしアーカイブと地形同梱検査が成功しました（[実行結果](https://github.com/dieu-detruit/watch-climber/actions/runs/37940668317)）。署名付きIPAの作成とTestFlightへのアップロードは未実行です。
+現在の検証状況: Webの29テストと本番ビルドは成功。GitHub ActionsのXcode 26.3でWatchアプリのコンパイル、6件のシミュレータテスト、実機向け署名なしアーカイブと地形同梱検査が成功しました（[実行結果](https://github.com/dieu-detruit/watch-climber/actions/runs/37940668317)）。署名付きIPAの作成とTestFlightへのアップロードも成功しました（[配布実行](https://github.com/dieu-detruit/brain-dump/actions/runs/37942132628)）。`0.1 / build 1.1` はApple側でVALID・READY_FOR_BETA_TESTING、暗号化申告受理済みです。確認時点で内部テストグループは0件のため、App Store ConnectのTestFlightで内部グループを作り、自分を追加してこのビルドを選択してください。
 
 設計と実装計画は`docs/superpowers/`にあります。
 
-GitHub: https://github.com/dieu-detruit/watch-climber （private）。GitHub Actionsでも署名不要のMacビルド・シミュレータテストを実行します。署名・TestFlight配布はCodemagicを使用します。
+GitHub: https://github.com/dieu-detruit/watch-climber （public）。ビルド・署名・TestFlight配布はGitHub Actionsを使用します。
