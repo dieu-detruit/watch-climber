@@ -288,7 +288,7 @@ export default function App() {
               <input
                 type="range"
                 min="0.7"
-                max="2.5"
+                max="12"
                 step="0.1"
                 value={zoom}
                 aria-label="地形の拡大"

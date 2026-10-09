@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   gridPosition,
+  terrainDetail,
   terrainHeight,
   validTerrain,
   type Terrain,
@@ -48,24 +49,27 @@ export default function TerrainView({ position, angle, zoom }: Props) {
     ctx.fillStyle = "#090e0c";
     ctx.fillRect(0, 0, W, H);
     const center = pos ?? { x: (t.columns - 1) / 2, y: (t.rows - 1) / 2 };
-    const radius = 64 / zoom;
-    const x0 = Math.max(0, Math.floor(center.x - radius)),
-      x1 = Math.min(t.columns - 1, Math.ceil(center.x + radius));
-    const y0 = Math.max(0, Math.floor(center.y - radius)),
-      y1 = Math.min(t.rows - 1, Math.ceil(center.y + radius));
-    const radians = (angle * Math.PI) / 180,
-      cs = Math.cos(radians),
-      sn = Math.sin(radians);
-    const step = 2; // ~120m mesh from the locally bundled ~61m height grid
+    const latitude =
+      pos && position
+        ? position.latitude
+        : (t.bounds.north + t.bounds.south) / 2;
     const spacing =
       (6378137 *
         (((t.bounds.east - t.bounds.west) * Math.PI) / 180) *
-        Math.cos(
-          position
-            ? (position.latitude * Math.PI) / 180
-            : (36.66 * Math.PI) / 180,
-        )) /
+        Math.cos((latitude * Math.PI) / 180)) /
       (t.columns - 1);
+    const { radius, step } = terrainDetail(spacing, zoom);
+    // Align vertices across zoom levels to avoid shifting the sampled grid.
+    const x0 = Math.max(0, Math.floor((center.x - radius) / step) * step),
+      x1 = Math.min(
+        t.columns - 1,
+        Math.ceil((center.x + radius) / step) * step,
+      );
+    const y0 = Math.max(0, Math.floor((center.y - radius) / step) * step),
+      y1 = Math.min(t.rows - 1, Math.ceil((center.y + radius) / step) * step);
+    const radians = (angle * Math.PI) / 180,
+      cs = Math.cos(radians),
+      sn = Math.sin(radians);
     const project = (x: number, y: number, z: number) => {
       const east = (x - center.x) * spacing,
         south = (y - center.y) * spacing;

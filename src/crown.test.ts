@@ -16,9 +16,9 @@ describe("terrain crown", () => {
       angle: 20,
       zoom: 1.2,
     });
-    expect(turnCrown({ angle: 20, zoom: 2.5 }, "zoom", 4)).toEqual({
+    expect(turnCrown({ angle: 20, zoom: 12 }, "zoom", 4)).toEqual({
       angle: 20,
-      zoom: 2.5,
+      zoom: 12,
     });
     expect(turnCrown({ angle: 20, zoom: 0.7 }, "zoom", -4)).toEqual({
       angle: 20,

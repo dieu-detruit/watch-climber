@@ -14,7 +14,7 @@ RAW = OUT / 'tiles'
 Z = 14
 X0, X1 = 14459, 14465
 Y0, Y1 = 6394, 6398
-STRIDE = 8  # ~61m spacing at this latitude, sampled from DEM10B tiles
+STRIDE = 2  # ~15m spacing; renderer chooses a coarser mesh when zoomed out
 
 def decode(r, g, b):
     value = (r << 16) + (g << 8) + b
@@ -68,7 +68,7 @@ def main():
         'zoom':Z,'tileOrigin':[X0,Y0],'pixelStride':STRIDE,
         'columns':columns,'rows':rows,'bounds':{'west':west,'east':east,'north':north,'south':south},
         'heightRange':[min(valid),max(valid)],'missingCells':len(heights)-len(valid),
-        'processing':'PNG標高値を復号し8画素間隔で抽出。欠損値はnull。水平間隔は約61m。',
+        'processing':'PNG標高値を復号し2画素間隔で抽出。欠損値はnull。水平間隔は約15m。',
         'heights':heights}
     (OUT/'goryu.json').write_text(json.dumps(payload,ensure_ascii=False,separators=(',',':'))+'\n')
     (OUT/'sources.json').write_text(json.dumps(sources,ensure_ascii=False,indent=2)+'\n')

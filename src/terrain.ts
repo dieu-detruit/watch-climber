@@ -86,3 +86,10 @@ export function validTerrain(value: unknown): value is Terrain {
     t.heightRange.every(Number.isFinite)
   );
 }
+
+// Keep geographic field of view independent of the DEM sampling resolution.
+export function terrainDetail(spacing: number, zoom: number) {
+  const radius = 3660 / Math.max(0.7, Math.min(12, zoom)) / spacing;
+  const step = 2 ** Math.max(0, Math.ceil(Math.log2((2 * radius) / 80)));
+  return { radius, step };
+}

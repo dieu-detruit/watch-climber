@@ -41,3 +41,12 @@ struct Terrain: Decodable {
         (bounds.east - bounds.west) * .pi / 180 * 6_378_137 * cos(latitude * .pi / 180) / Double(columns - 1)
     }
 }
+
+struct TerrainDetail {
+    let radius: Double
+    let step: Int
+    init(spacing: Double, zoom: Double) {
+        radius = 3660 / max(0.7, min(12, zoom)) / spacing
+        step = Int(pow(2.0, max(0, ceil(log2(2 * radius / 80)))))
+    }
+}

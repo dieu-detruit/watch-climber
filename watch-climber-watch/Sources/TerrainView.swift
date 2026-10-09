@@ -21,6 +21,10 @@ struct TerrainView: View {
         guard let h = terrain.height(x: p.x, y: p.y) else { return "地表標高なし" }
         return "地表 \(Int(h))m"
     }
+    private var meshSpacing: Int {
+        let spacing = terrain.spacing(at: (terrain.bounds.north + terrain.bounds.south) / 2)
+        return Int((spacing * Double(TerrainDetail(spacing: spacing, zoom: zoom).step)).rounded())
+    }
     var body: some View {
         VStack(spacing: 2) {
             HStack {
@@ -34,11 +38,11 @@ struct TerrainView: View {
                 .focused($crownFocused)
                 .digitalCrownRotation(zoomMode ? $zoom : $angle,
                                       from: zoomMode ? 0.7 : -180,
-                                      through: zoomMode ? 2.5 : 180,
-                                      by: zoomMode ? 0.05 : 3,
+                                      through: zoomMode ? 12 : 180,
+                                      by: zoomMode ? 0.1 : 3,
                                       sensitivity: .low, isContinuous: !zoomMode,
                                       isHapticFeedbackEnabled: true)
-            Text("国土地理院 DEM10B 加工").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text("\(meshSpacing)m · 国土地理院 DEM10B").font(.system(size: 9)).foregroundStyle(.secondary)
         }
         .onAppear { crownFocused = true }
     }
@@ -49,7 +53,8 @@ struct TerrainView: View {
             let base = terrain.height(x: center.0, y: center.1) ?? 2000
             let latitude = fix.flatMap { $0.usable && position != nil ? $0.latitude : nil } ?? (terrain.bounds.north + terrain.bounds.south)/2
             let spacing = terrain.spacing(at: latitude)
-            let radius = 60.0 / zoom
+            let detail = TerrainDetail(spacing: spacing, zoom: zoom)
+            let radius = detail.radius, step = detail.step
             let scale = Double(size.width) / (radius * spacing * 2)
             let radians = angle * .pi / 180
             func project(_ x: Double, _ y: Double, _ height: Double) -> (point: CGPoint, depth: Double) {
@@ -61,12 +66,12 @@ struct TerrainView: View {
             }
             struct Triangle { let points: [CGPoint]; let depth: Double; let height: Double }
             var triangles: [Triangle] = []
-            let left = max(0, Int(center.0-radius)), right = min(terrain.columns-1, Int(center.0+radius))
-            let top = max(0, Int(center.1-radius)), bottom = min(terrain.rows-1, Int(center.1+radius))
+            let left = max(0, Int(floor((center.0-radius)/Double(step))) * step), right = min(terrain.columns-1, Int(ceil((center.0+radius)/Double(step))) * step)
+            let top = max(0, Int(floor((center.1-radius)/Double(step))) * step), bottom = min(terrain.rows-1, Int(ceil((center.1+radius)/Double(step))) * step)
             if left < right && top < bottom {
-                for y in stride(from: top, to: bottom, by: 3) {
-                    for x in stride(from: left, to: right, by: 3) {
-                        let nextX = min(x+3, right), nextY = min(y+3, bottom)
+                for y in stride(from: top, to: bottom, by: step) {
+                    for x in stride(from: left, to: right, by: step) {
+                        let nextX = min(x+step, right), nextY = min(y+step, bottom)
                         let coords = [(x,y), (nextX,y), (x,nextY), (nextX,nextY)]
                         for indices in [[0,1,2], [1,3,2]] {
                             var vertices: [CGPoint] = [], depths: [Double] = [], heights: [Double] = []

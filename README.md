@@ -38,7 +38,7 @@ npm run dev -- --host 0.0.0.0
 
 - 範囲：約14km × 10km（北緯36.6160〜36.7036、東経137.7027〜137.8558）
 - 元データ：z14、X=14459〜14465、Y=6394〜6398
-- グリッド：224 × 160、8画素間隔（約61m）、欠損0
+- グリッド：896 × 640、2画素間隔（約15m）、欠損0
 - 描画：2グリッド間隔（約122m）で三角形を描画。表示上の高さは投影処理で強調
 - `goryu.json`：標高・範囲・取得日時
 - `sources.json`：元URLと各PNGのSHA-256
@@ -100,7 +100,7 @@ brain-dumpの構成を参考に、実際に利用するApple Developerチーム�
 
 `watch-climber-watch/` にSwiftUI / Core Location / HealthKitのWatch-onlyアプリを実装しました。実GPSの座標・標高・精度、Crownで操作するオフライン3D地形、軌跡、心拍、開始・一時停止・再開・終了、端末内の記録保存に対応します。ネイティブには模擬位置を供給しません。地形の範囲外では現在地の座標を表示し、地形上に偽の現在位置を描きません。
 
-地形はWebと同じ `public/terrain/goryu.json` をバンドルします。緯度をMercator座標、経度を横座標に変換し、元タイルの画素中心に合わせています。格子は約61m間隔（ネイティブ描画は3格子ごと）です。地表標高はDEM、GPS標高はCore Locationの計測値で、別々に表示します。画面を消した際のGPS・心拍・電池消費は実機確認が必要です。
+地形はWebと同じ `public/terrain/goryu.json` をバンドルします。緯度をMercator座標、経度を横座標に変換し、元タイルの画素中心に合わせています。格子は約15m間隔です。描画はズームに応じて約122m→61m→30m→15mへ自動で細かくなり、最大12倍まで拡大できます。地表標高はDEM、GPS標高はCore Locationの計測値で、別々に表示します。画面を消した際のGPS・心拍・電池消費は実機確認が必要です。
 
 記録時間はGPS更新とは独立して加算します。GPS精度が50mを超える点は軌跡・集計に使わず、30秒以上の位置更新の空白、一時停止、再起動をまたいだ線を結びません。記録を約10秒ごとにDocumentsへatomic保存し、復元した記録は一時停止します。終了済みの記録はUUID別JSONでも保存します。初版には保存履歴の一覧やエクスポートUIはありません。再起動で途切れたHealthKitワークアウトを復元せず、再開時に新しいワークアウトを作ります。
 
@@ -108,8 +108,10 @@ brain-dumpの構成を参考に、実際に利用するApple Developerチーム�
 
 最初の実機確認: 位置情報を許可→座標・精度が実際に更新される→記録画面で開始してヘルスケアを許可→数分歩いて消灯中も時間・軌跡が続く→一時停止・再開→終了。五竜以外では3D画面の「収録範囲外」が正常です。
 
-現在の検証状況: Webの29テストと本番ビルドは成功。GitHub ActionsのXcode 26.3でWatchアプリのコンパイル、6件のシミュレータテスト、実機向け署名なしアーカイブと地形同梱検査が成功しました（[実行結果](https://github.com/dieu-detruit/watch-climber/actions/runs/37940668317)）。署名付きIPAの作成とTestFlightへのアップロードも成功しました（[配布実行](https://github.com/dieu-detruit/brain-dump/actions/runs/37942132628)）。`0.1 / build 1.1` はApple側でVALID・READY_FOR_BETA_TESTING、暗号化申告受理済みです。確認時点で内部テストグループは0件のため、App Store ConnectのTestFlightで内部グループを作り、自分を追加してこのビルドを選択してください。
+現在の検証状況: Webの30テストと本番ビルドは成功。GitHub ActionsのXcode 26.3でWatchアプリのコンパイル、6件のシミュレータテスト、実機向け署名なしアーカイブと地形同梱検査が成功しました（[実行結果](https://github.com/dieu-detruit/watch-climber/actions/runs/37940668317)）。署名付きIPAの作成とTestFlightへのアップロードも成功しました（[配布実行](https://github.com/dieu-detruit/brain-dump/actions/runs/37942132628)）。`0.1 / build 1.1` はApple側でVALID・READY_FOR_BETA_TESTING、暗号化申告受理済みです。確認時点で内部テストグループは0件のため、App Store ConnectのTestFlightで内部グループを作り、自分を追加してこのビルドを選択してください。
 
 設計と実装計画は`docs/superpowers/`にあります。
 
 GitHub: https://github.com/dieu-detruit/watch-climber （public）。ビルド・署名・TestFlight配布はGitHub Actionsを使用します。
+
+位置情報は「使用中のみ」で、記録開始後のHKWorkoutSessionとバックグラウンド位置更新により文字盤・別アプリ表示中も計測する構成です。記録開始前・一時停止・終了・強制終了は継続記録の対象外です。実機での消灯中の軌跡と電池消費は引き続き確認が必要です。

@@ -11,7 +11,7 @@ export function turnCrown(
       ...camera,
       zoom:
         Math.round(
-          Math.max(0.7, Math.min(2.5, camera.zoom + steps * 0.1)) * 10,
+          Math.max(0.7, Math.min(12, camera.zoom + steps * 0.1)) * 10,
         ) / 10,
     };
   return {

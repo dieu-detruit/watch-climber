@@ -63,7 +63,7 @@ export default function WatchFrame({
         <Crown
           value={crownValue}
           min={crownMode === "rotate" ? -180 : 0.7}
-          max={crownMode === "rotate" ? 180 : 2.5}
+          max={crownMode === "rotate" ? 180 : 12}
           description={
             crownMode === "rotate"
               ? `回転 ${crownValue}度`

@@ -6,15 +6,26 @@ final class ClimberTests: XCTestCase {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "goryu", withExtension: "json"))
         let terrain = try JSONDecoder().decode(Terrain.self, from: Data(contentsOf: url))
         let world: Double = 256 * pow(2, 14)
-        for (col, row) in [(0.0, 0.0), (223, 159), (100, 80), (111.25, 79.75)] {
-            let lon = (14459 * 256 + col * 8 + 0.5) / world * 360 - 180
-            let lat = atan(sinh(.pi * (1 - 2 * (6394 * 256 + row * 8 + 0.5) / world))) * 180 / .pi
+        for (col, row) in [(0.0, 0.0), (Double(terrain.columns-1), Double(terrain.rows-1)), (100, 80), (111.25, 79.75)] {
+            let lon = (14459 * 256 + col * 2 + 0.5) / world * 360 - 180
+            let lat = atan(sinh(.pi * (1 - 2 * (6394 * 256 + row * 2 + 0.5) / world))) * 180 / .pi
             let point = try XCTUnwrap(terrain.grid(latitude: lat, longitude: lon))
             XCTAssertEqual(point.x, col, accuracy: 1e-7)
             XCTAssertEqual(point.y, row, accuracy: 1e-7)
         }
         XCTAssertNil(terrain.grid(latitude: 35, longitude: 139))
         XCTAssertNil(terrain.grid(latitude: .nan, longitude: 137.7))
+    }
+
+    func testTerrainDetailZoomsIntoSourceResolutionWithBoundedMesh() {
+        XCTAssertEqual(TerrainDetail(spacing: 15, zoom: 12).step, 1)
+        XCTAssertEqual(TerrainDetail(spacing: 15, zoom: 1).radius * 15, 3660, accuracy: 0.001)
+        for zoom in [0.7, 1, 2, 4, 8, 12] {
+            let detail = TerrainDetail(spacing: 15, zoom: zoom)
+            // Grid alignment adds at most one extra cell per axis.
+            let cells = ceil(2 * detail.radius / Double(detail.step)) + 1
+            XCTAssertLessThanOrEqual(2 * cells * cells, 13200)
+        }
     }
 
     private func fix(_ second: Double, _ lon: Double = 137.75, altitude: Double? = 2000, accuracy: Double = 5) -> Fix {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   decodeHeight,
+  terrainDetail,
   validTerrain,
   gridPosition,
   terrainHeight,
@@ -42,7 +43,7 @@ it("maps actual DEM tile pixel centers to their exact grid indices", () => {
   const world = 256 * 2 ** actualTerrain.zoom;
   for (const [col, row] of [
     [0, 0],
-    [223, 159],
+    [actualTerrain.columns - 1, actualTerrain.rows - 1],
     [100, 80],
     [32, 32],
     [111.25, 79.75],
@@ -64,5 +65,19 @@ it("maps actual DEM tile pixel centers to their exact grid indices", () => {
         5,
       );
     }
+  }
+});
+
+it("uses finer real terrain when zooming without unbounded mesh work", () => {
+  const far = terrainDetail(15, 1);
+  const near = terrainDetail(15, 12);
+  expect(far.radius * 15).toBeCloseTo(3660);
+  expect(near.step).toBe(1);
+  expect(far.step).toBeGreaterThan(near.step);
+  for (const zoom of [0.7, 1, 2, 4, 8, 12]) {
+    const { radius, step } = terrainDetail(15, zoom);
+    expect(2 * (Math.ceil((2 * radius) / step) + 1) ** 2).toBeLessThanOrEqual(
+      13200,
+    );
   }
 });
