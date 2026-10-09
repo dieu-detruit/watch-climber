@@ -1,0 +1,44 @@
+workflows:
+  watch-simulator:
+    name: Watch Climber simulator tests
+    instance_type: mac_mini_m2
+    environment:
+      xcode: 26.3
+    scripts:
+      - name: Prepare XcodeGen
+        script: brew install xcodegen
+      - name: Test Watch app
+        script: bash watch-climber-watch/scripts/test.sh
+    artifacts:
+      - '**/*.xcresult'
+  watch-testflight:
+    name: Watch Climber TestFlight
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: brain-dump
+    environment:
+      xcode: 26.3
+      groups: [watch-climber]
+      vars:
+        APP_BUNDLE_ID: dev.takafumi.watchclimber
+        WATCH_BUNDLE_ID: dev.takafumi.watchclimber.watchkit
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: "$APP_BUNDLE_ID*"
+    scripts:
+      - name: Prepare XcodeGen
+        script: brew install xcodegen
+      - name: Set up signing keychain
+        script: |
+          keychain initialize
+          keychain add-certificates
+      - name: Archive and export
+        script: bash watch-climber-watch/scripts/archive.sh
+    artifacts:
+      - /tmp/watch-climber-export/*.ipa
+      - /tmp/WatchClimber.xcarchive
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups: [Internal]

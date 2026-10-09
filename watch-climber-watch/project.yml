@@ -1,0 +1,86 @@
+name: WatchClimber
+options:
+  deploymentTarget:
+    watchOS: '10.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    DEVELOPMENT_TEAM: $(APPLE_TEAM_ID)
+    MARKETING_VERSION: '0.1'
+    CURRENT_PROJECT_VERSION: 1
+targets:
+  WatchClimber:
+    type: application
+    platform: watchOS
+    sources:
+      - Sources
+      - Resources
+      - path: ../public/terrain/goryu.json
+        buildPhase: resources
+    info:
+      path: Generated/Watch-Info.plist
+      properties:
+        CFBundleDisplayName: Watch Climber
+        WKApplication: true
+        WKWatchOnly: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSLocationWhenInUseUsageDescription: 山での現在地と標高を表示し、登山の軌跡をWatch内に記録します。
+        NSHealthShareUsageDescription: 登山中の心拍を表示します。
+        NSHealthUpdateUsageDescription: 登山をワークアウトとして記録し、画面を消している間も計測を続けます。
+        WKBackgroundModes: [workout-processing]
+        UIBackgroundModes: [location]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(WATCH_BUNDLE_ID)
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: WatchClimber.entitlements
+    scheme:
+      testTargets: [WatchClimberTests]
+  WatchClimberTests:
+    type: bundle.unit-test
+    platform: watchOS
+    sources: [Tests]
+    dependencies:
+      - target: WatchClimber
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: dev.takafumi.watchclimber.tests
+  WatchClimberContainer:
+    type: application.watchapp2-container
+    platform: iOS
+    deploymentTarget: '17.0'
+    sources: [ContainerResources]
+    info:
+      path: Generated/Container-Info.plist
+      properties:
+        CFBundleDisplayName: Watch Climber
+        ITSWatchOnlyContainer: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationLaunchProhibited: true
+        CFBundlePackageType: APPL
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: WatchClimber
+        embed: true
+        copy:
+          destination: productsDirectory
+          subpath: $(CONTENTS_FOLDER_PATH)/Watch
+schemes:
+  WatchClimberContainer:
+    build:
+      targets:
+        WatchClimberContainer: all
+    archive:
+      config: Release

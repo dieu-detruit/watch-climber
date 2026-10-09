@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.superpowers/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Generated native project/build products
+watch-climber-watch/*.xcodeproj/
+watch-climber-watch/Generated/
+*.xcresult/
+*.xcarchive/
+
+__pycache__/
+*.pyc
+.env
+.env.*
+*.p8
+*.p12
+*.mobileprovision

@@ -1,0 +1,44 @@
+name: Watch simulator
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'watch-climber-watch/**'
+      - 'public/terrain/goryu.json'
+      - '.github/workflows/watch.yml'
+permissions:
+  contents: read
+concurrency:
+  group: watch-simulator-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  watch:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare Xcode
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_26.3.app
+          xcodebuild -version
+          brew install xcodegen
+      - name: Build and test Watch app
+        run: bash watch-climber-watch/scripts/test.sh
+      - name: Verify unsigned archive
+        run: |
+          xcodebuild archive -project watch-climber-watch/WatchClimber.xcodeproj -scheme WatchClimberContainer \
+            -destination 'generic/platform=iOS' -archivePath /tmp/WatchClimber.xcarchive \
+            APP_BUNDLE_ID=dev.takafumi.watchclimber WATCH_BUNDLE_ID=dev.takafumi.watchclimber.watchkit \
+            CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=
+          python3 watch-climber-watch/scripts/check-archive.py /tmp/WatchClimber.xcarchive
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-tests
+          path: /tmp/climber-tests-local.xcresult
+          retention-days: 7
+          if-no-files-found: ignore
