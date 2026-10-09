@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+python3 watch-climber-watch/scripts/test-check-archive.py
 xcodegen generate --spec watch-climber-watch/project.yml
 watch_simulator_id=$(xcrun simctl list devices available -j | python3 watch-climber-watch/scripts/select-simulator.py)
 derived_data="${RUNNER_TEMP:-/tmp}/climber-derived-data"

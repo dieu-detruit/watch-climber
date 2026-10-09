@@ -13,6 +13,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     @Published var starting = false
     @Published var finishing = false
     let terrain = Terrain.load()
+    let route = PlannedRoute.load()
     private let location = CLLocationManager()
     private let health = HKHealthStore()
     private var workout: HKWorkoutSession?

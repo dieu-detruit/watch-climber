@@ -19,15 +19,29 @@ struct WatchClimberApp: App {
 struct ClimberView: View {
     @ObservedObject var monitor: HikeMonitor
     @State private var confirmEnd = false
+    @State private var page = 0
+    @State private var inspection = RouteInspection()
+    @State private var crownMode: TerrainCrownMode = .inspect
+    @AppStorage("terrain-angle") private var angle = 0.0
+    @AppStorage("terrain-zoom") private var zoom = 1.0
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
-            TabView {
+            let display = monitor.route.map {
+                RouteDisplayContext(route: $0, fix: monitor.fix, now: timeline.date,
+                                    progressHintM: monitor.record.distance, inspection: inspection)
+            }
+            TabView(selection: $page) {
                 status(at: timeline.date).tag(0)
                 if let terrain = monitor.terrain {
-                    TerrainView(terrain: terrain, fix: monitor.fix, now: timeline.date).tag(1)
+                    TerrainView(terrain: terrain, route: monitor.route, display: display,
+                                fix: monitor.fix, now: timeline.date, isActive: page == 1, inspection: $inspection,
+                                angle: $angle, zoom: $zoom, crownMode: $crownMode).tag(1)
                 } else { Text("地形データを読み込めません").tag(1) }
-                track.tag(2)
-                controls.tag(3)
+                if let route = monitor.route, let display {
+                    ElevationProfileView(route: route, display: display, isActive: page == 2, inspection: $inspection).tag(2)
+                } else { Text("コースデータを読み込めません").font(.caption).tag(2) }
+                track.tag(3)
+                controls.tag(4)
             }
             .tabViewStyle(.page)
         }
