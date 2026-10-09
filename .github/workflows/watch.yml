@@ -28,6 +28,7 @@ jobs:
       - name: Build and test Watch app
         run: bash watch-climber-watch/scripts/test.sh
       - name: Verify unsigned archive
+        if: success() || failure()
         run: |
           xcodebuild archive -project watch-climber-watch/WatchClimber.xcodeproj -scheme WatchClimberContainer \
             -destination 'generic/platform=iOS' -archivePath /tmp/WatchClimber.xcarchive \
