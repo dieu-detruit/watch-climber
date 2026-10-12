@@ -1,0 +1,32 @@
+name: Goryu viewer verification assets
+on:
+  push:
+    branches: [fix/goryu-viewer-verification-20261012]
+    paths: [.github/workflows/goryu-viewer-assets.yml]
+permissions:
+  contents: read
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package public terrain and pinned libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/goryu-assets
+          cp public/terrain/goryu.json public/terrain/sources.json /tmp/goryu-assets/
+          cd /tmp/goryu-assets
+          npm init -y >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund three@0.180.0 fflate@0.8.2
+          node -e 'const fs=require("fs");const d=JSON.parse(fs.readFileSync("goryu.json","utf8"));if(d.heights.length!==d.columns*d.rows||d.missingCells!==0)throw Error("Invalid DEM");console.log(JSON.stringify({columns:d.columns,rows:d.rows,source:d.source,bounds:d.bounds}));'
+          sha256sum goryu.json > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: goryu-viewer-public-assets
+          path: /tmp/goryu-assets
+          retention-days: 1
+          if-no-files-found: error
