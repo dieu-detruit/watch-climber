@@ -19,7 +19,12 @@ class ArchiveChecks(unittest.TestCase):
                 'CFBundleShortVersionString': '0.1', 'ITSAppUsesNonExemptEncryption': False,
                 'CFBundleExecutable': 'Climber',
                 'WKBackgroundModes': ['workout-processing']}
-        container_info = dict(info, CFBundleIdentifier='dev.takafumi.watchclimber')
+        container_info = dict(info, CFBundleIdentifier='dev.takafumi.watchclimber',
+                              UISupportedInterfaceOrientations=[
+                                  'UIInterfaceOrientationPortrait',
+                                  'UIInterfaceOrientationPortraitUpsideDown',
+                                  'UIInterfaceOrientationLandscapeLeft',
+                                  'UIInterfaceOrientationLandscapeRight'])
         watch_info = dict(info, CFBundleIdentifier='dev.takafumi.watchclimber.watchkit',
                           WKCompanionAppBundleIdentifier='dev.takafumi.watchclimber',
                           WKRunsIndependentlyOfCompanionApp=True)
@@ -49,6 +54,19 @@ class ArchiveChecks(unittest.TestCase):
             watch = self.make_archive(root)
             (watch.parent.parent / 'Climber').unlink()
             self.assertNotEqual(self.check(root).returncode, 0)
+
+    def test_missing_or_incomplete_phone_orientations_are_rejected(self):
+        for orientations in (None, ['UIInterfaceOrientationPortrait']):
+            with self.subTest(orientations=orientations), tempfile.TemporaryDirectory() as root:
+                watch = self.make_archive(root)
+                path = watch.parent.parent / 'Info.plist'
+                info = plistlib.loads(path.read_bytes())
+                if orientations is None:
+                    del info['UISupportedInterfaceOrientations']
+                else:
+                    info['UISupportedInterfaceOrientations'] = orientations
+                path.write_bytes(plistlib.dumps(info))
+                self.assertNotEqual(self.check(root).returncode, 0)
 
     def test_watch_only_stub_flags_are_rejected(self):
         for flag in ('ITSWatchOnlyContainer', 'LSApplicationLaunchProhibited'):

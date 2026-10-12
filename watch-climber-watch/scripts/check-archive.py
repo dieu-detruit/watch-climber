@@ -16,6 +16,12 @@ for app in (container, watch):
 phone_info = plistlib.loads((container / 'Info.plist').read_bytes())
 assert not phone_info.get('ITSWatchOnlyContainer', False)
 assert not phone_info.get('LSApplicationLaunchProhibited', False)
+# The runnable universal companion must support every iPad multitasking orientation.
+required_orientations = {'UIInterfaceOrientationPortrait', 'UIInterfaceOrientationPortraitUpsideDown',
+                         'UIInterfaceOrientationLandscapeLeft', 'UIInterfaceOrientationLandscapeRight'}
+assert required_orientations <= set(phone_info.get('UISupportedInterfaceOrientations', []))
+assert required_orientations <= set(phone_info.get('UISupportedInterfaceOrientations~ipad',
+                                                   phone_info['UISupportedInterfaceOrientations']))
 info = plistlib.loads((watch / 'Info.plist').read_bytes())
 assert not info.get('WKWatchOnly', False)
 assert info['WKRunsIndependentlyOfCompanionApp'] is True
