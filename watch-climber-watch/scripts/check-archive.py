@@ -12,9 +12,15 @@ for app in (container, watch):
     assert info['CFBundlePackageType'] == 'APPL'
     assert info['CFBundleVersion'] and info['CFBundleShortVersionString']
     assert info['ITSAppUsesNonExemptEncryption'] is False
+    assert (app / info['CFBundleExecutable']).is_file()
+phone_info = plistlib.loads((container / 'Info.plist').read_bytes())
+assert not phone_info.get('ITSWatchOnlyContainer', False)
+assert not phone_info.get('LSApplicationLaunchProhibited', False)
 info = plistlib.loads((watch / 'Info.plist').read_bytes())
-assert (watch / info['CFBundleExecutable']).is_file()
-assert info['WKWatchOnly'] is True
+assert not info.get('WKWatchOnly', False)
+assert info['WKRunsIndependentlyOfCompanionApp'] is True
+assert info['WKCompanionAppBundleIdentifier'] == phone_info['CFBundleIdentifier']
+assert info['CFBundleIdentifier'].startswith(phone_info['CFBundleIdentifier'] + '.')
 assert 'workout-processing' in info['WKBackgroundModes']
 terrain = json.loads((watch / 'goryu.json').read_text())
 assert len(terrain['heights']) == terrain['columns'] * terrain['rows']
@@ -32,4 +38,4 @@ for landmark in route['landmarks']:
     assert 0 <= landmark['pointIndex'] < len(route['points'])
 assert any(p['name'] == '五竜岳' for p in route['landmarks'])
 assert any(p['name'] == '五竜山荘テント場' for p in route['landmarks'])
-print('Container, Watch executable, privacy declarations, offline terrain and course verified')
+print('iPhone/Watch executables, companion association, independent recording, privacy and offline resources verified')

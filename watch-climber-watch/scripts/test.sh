@@ -3,6 +3,13 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 python3 watch-climber-watch/scripts/test-check-archive.py
 xcodegen generate --spec watch-climber-watch/project.yml
+# Compile the new receiver on an iPhone simulator before any signing/upload.
+xcodebuild build -project watch-climber-watch/WatchClimber.xcodeproj -scheme WatchClimberContainer \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath "${RUNNER_TEMP:-/tmp}/climber-phone-derived-data" \
+  APP_BUNDLE_ID="${APP_BUNDLE_ID:-dev.takafumi.watchclimber}" \
+  WATCH_BUNDLE_ID="${WATCH_BUNDLE_ID:-dev.takafumi.watchclimber.watchkit}" \
+  CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM=
 watch_simulator_id=$(xcrun simctl list devices available -j | python3 watch-climber-watch/scripts/select-simulator.py)
 derived_data="${RUNNER_TEMP:-/tmp}/climber-derived-data"
 settings=(

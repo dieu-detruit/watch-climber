@@ -14,6 +14,10 @@ SwiftUI watchOS app using real Core Location and HealthKit. The route geometry a
 
 The native course resource contains 790 coordinates and 19 named visits. Personal plan IDs, share URLs, dates, participants, day numbers and camp schedules are omitted.
 
+## Raw record recovery
+
+Open the updated app on both paired devices. On iPhone, tap `Watchから取り出す`, or on the last Watch page tap `iPhoneに送る`. The iPhone lists verified raw JSON copies and offers `共有・ファイルに保存`; they also appear under Watch Climber in Files. Startup snapshots retain old/malformed bytes before restoring a hike, and failed preservation or decoding blocks overwriting the current record. Transfer retries never remove Watch originals. Wait for iPhone saved confirmation, not just the Watch transfer queue. Physical paired-device transfer and update-in-place preservation require device validation; simulator tests alone cannot verify them.
+
 ## Verification
 
 On a Mac with Xcode 26.3, watchOS Simulator and XcodeGen:

@@ -98,7 +98,7 @@ brain-dumpの構成を参考に、実際に利用するApple Developerチーム�
 
 ## 次の段階
 
-`watch-climber-watch/` にSwiftUI / Core Location / HealthKitのWatch-onlyアプリを実装しました。実GPSの座標・標高・精度、Crownで操作するオフライン3D地形、軌跡、心拍、開始・一時停止・再開・終了、端末内の記録保存に対応します。ネイティブには模擬位置を供給しません。地形の範囲外では現在地の座標を表示し、地形上に偽の現在位置を描きません。
+`watch-climber-watch/` にSwiftUI / Core Location / HealthKitのindependent Watch + iPhone record-export companionアプリを実装しました。実GPSの座標・標高・精度、Crownで操作するオフライン3D地形、軌跡、心拍、開始・一時停止・再開・終了、端末内の記録保存に対応します。ネイティブには模擬位置を供給しません。地形の範囲外では現在地の座標を表示し、地形上に偽の現在位置を描きません。
 
 地形はWebと同じ `public/terrain/goryu.json` をバンドルします。緯度をMercator座標、経度を横座標に変換し、元タイルの画素中心に合わせています。格子は約15m間隔です。描画はズームに応じて約244m→122m→61m→30m→15mへ自動で細かくなり、最大12倍まで拡大できます。地表標高はDEM、GPS標高はCore Locationの計測値で、別々に表示します。画面を消した際のGPS・心拍・電池消費は実機確認が必要です。
 

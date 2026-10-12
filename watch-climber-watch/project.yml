@@ -14,6 +14,7 @@ targets:
     platform: watchOS
     sources:
       - Sources
+      - Shared
       - Resources
       - path: ../public/terrain/goryu.json
         buildPhase: resources
@@ -22,7 +23,8 @@ targets:
       properties:
         CFBundleDisplayName: Watch Climber
         WKApplication: true
-        WKWatchOnly: true
+        WKCompanionAppBundleIdentifier: $(APP_BUNDLE_ID)
+        WKRunsIndependentlyOfCompanionApp: true
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -51,20 +53,21 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: dev.takafumi.watchclimber.tests
   WatchClimberContainer:
-    type: application.watchapp2-container
+    type: application
     platform: iOS
     deploymentTarget: '17.0'
-    sources: [ContainerResources]
+    sources: [PhoneSources, Shared, ContainerResources]
     info:
       path: Generated/Container-Info.plist
       properties:
         CFBundleDisplayName: Watch Climber
-        ITSWatchOnlyContainer: true
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        LSApplicationLaunchProhibited: true
         CFBundlePackageType: APPL
+        UILaunchScreen: {}
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)

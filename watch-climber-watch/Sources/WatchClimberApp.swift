@@ -3,10 +3,11 @@ import SwiftUI
 @main
 struct WatchClimberApp: App {
     @StateObject private var monitor = HikeMonitor()
+    @StateObject private var transfer = RecordTransfer()
     @Environment(\.scenePhase) private var phase
     var body: some Scene {
         WindowGroup {
-            ClimberView(monitor: monitor)
+            ClimberView(monitor: monitor, transfer: transfer)
                 .task { monitor.requestLocation() }
                 .onChange(of: phase) { _, next in
                     if next == .active { monitor.requestLocation() }
@@ -18,6 +19,7 @@ struct WatchClimberApp: App {
 
 struct ClimberView: View {
     @ObservedObject var monitor: HikeMonitor
+    @ObservedObject var transfer: RecordTransfer
     @State private var confirmEnd = false
     @State private var page = 0
     @State private var inspection = RouteInspection()
@@ -42,6 +44,15 @@ struct ClimberView: View {
                 } else { Text("コースデータを読み込めません").font(.caption).tag(2) }
                 track.tag(3)
                 controls.tag(4)
+                ScrollView {
+                    VStack(spacing: 8) {
+                        Text("記録を取り出す").font(.headline)
+                        Button("iPhoneに送る") { transfer.requestExport() }
+                        Text(transfer.status).font(.caption2)
+                        Text("保存済みの元のJSONをコピーします。原本はWatchに残ります。")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }.tag(5)
             }
             .tabViewStyle(.page)
         }

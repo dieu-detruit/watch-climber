@@ -23,11 +23,24 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     private var ticker: Timer?
     private var completingWorkout = false
     private let storageURL: URL
+    private var preservationFailure: String?
 
-    override init() {
-        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    override convenience init() {
+        self.init(directory: FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0])
+    }
+
+    init(directory: URL) {
         storageURL = directory.appendingPathComponent("current-hike.json")
         super.init()
+        // Preserve the exact on-device bytes before restore changes state or any
+        // scene/timer callback can save. A failed backup must never permit writes.
+        do {
+            let exports = RecordExportStore(directory: directory.appendingPathComponent("RecordExports"))
+            _ = try exports.snapshotRecords(in: directory)
+        } catch {
+            preservationFailure = "原本の保護に失敗しました。記録の上書きを停止しています: \(error.localizedDescription)"
+            saveMessage = preservationFailure
+        }
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         location.distanceFilter = 5
@@ -43,7 +56,10 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
             do {
                 record = try JSONDecoder().decode(HikeRecord.self, from: Data(contentsOf: storageURL))
                 record.prepareAfterRestore()
-            } catch { saveMessage = "前の記録を読み込めませんでした" }
+            } catch {
+                preservationFailure = "前の記録を読み込めません。原本を保護しています。「iPhoneに送る」から取り出してください"
+                saveMessage = preservationFailure
+            }
         }
     }
 
@@ -83,6 +99,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     }
 
     func start() async {
+        guard preservationFailure == nil else { saveMessage = preservationFailure; return }
         guard !starting, !finishing, record.state != .recording else { return }
         if record.state == .finished && saveMessage != nil { return }
         guard location.authorizationStatus == .authorizedWhenInUse || location.authorizationStatus == .authorizedAlways else {
@@ -175,6 +192,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
         finishing = false
     }
     func persist() {
+        guard preservationFailure == nil else { saveMessage = preservationFailure; return }
         do {
             let data = try JSONEncoder().encode(record)
             try data.write(to: storageURL, options: .atomic)
