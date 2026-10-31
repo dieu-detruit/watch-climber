@@ -56,7 +56,14 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: '17.0'
-    sources: [PhoneSources, Shared, ContainerResources]
+    sources:
+      - PhoneSources
+      - Shared
+      - ContainerResources
+      - Sources/HikeRecord.swift
+      - Sources/Terrain.swift
+      - path: ../public/terrain/goryu.json
+        buildPhase: resources
     info:
       path: Generated/Container-Info.plist
       properties:
@@ -65,6 +72,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundlePackageType: APPL
+        NSLocationWhenInUseUsageDescription: iPhoneで登山中の現在地と標高・距離・軌跡を記録します。
+        UIBackgroundModes: [location]
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

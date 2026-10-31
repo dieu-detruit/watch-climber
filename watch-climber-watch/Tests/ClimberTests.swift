@@ -98,4 +98,26 @@ final class ClimberTests: XCTestCase {
         XCTAssertEqual(restored.elapsed, 0)
         XCTAssertEqual(restored.distance, 0)
     }
+    func testWatchSnapshotContinuesOnPhoneWithoutBridgingGap() throws {
+        var source = HikeRecord()
+        source.resume(at: Date(timeIntervalSince1970: 100))
+        source.ingest(fix(100))
+        source.ingest(fix(110, 137.7501, altitude: 2005))
+        let originalDistance = source.distance
+        let originalID = source.id
+        var imported = try HikeContinuation.restore(JSONEncoder().encode(source))
+        XCTAssertEqual(imported.id, originalID)
+        XCTAssertEqual(imported.state, .paused)
+        imported.resume(at: Date(timeIntervalSince1970: 1000))
+        imported.ingest(fix(1000, 137.76))
+        XCTAssertEqual(imported.distance, originalDistance)
+        XCTAssertTrue(imported.points.last!.breakBefore)
+    }
+
+    func testCompletedWatchSnapshotIsNotImportable() throws {
+        var finished = HikeRecord()
+        finished.state = .finished
+        XCTAssertThrowsError(try HikeContinuation.restore(JSONEncoder().encode(finished)))
+    }
+
 }

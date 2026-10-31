@@ -1,6 +1,10 @@
 name: Watch simulator
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'watch-climber-watch/**'
+      - '.github/workflows/watch.yml'
   push:
     branches: [main]
     paths:

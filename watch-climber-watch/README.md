@@ -35,3 +35,11 @@ python3 watch-climber-watch/scripts/test-check-archive.py
 ```
 
 Those Python checks do not compile Swift or validate watchOS UI/runtime behavior. A fresh native simulator build/test and signed distribution are required before installing this update.
+
+## iPhone live recording and Watch handoff (2026-11-01 draft)
+
+The iPhone companion now offers independent real GPS altitude, elapsed time, horizontal distance, cumulative ascent, recorded trail, and start/pause/resume/finish. Background location updates run only while recording (permission required). A bundled 3D DEM view uses the same Goryu data as the Watch, but **does not cover Hanno**. The iPhone has no independent live heart-rate sensor, and the Watch's route inspection/landmark profile is not yet ported.
+
+For a battery-safe handoff, **pause the Watch recording first**. While the Watch is still powered, open both apps, use `Watchから取り出す`, wait for iPhone saved confirmation, then select the newest compatible JSON and tap `引き継ぐ`. The imported phone record remains paused until the user taps `記録再開`. The Watch raw JSON stays untouched; the phone archives any previous phone record before replacement, and a new GPS segment starts without drawing a false path across the transfer interval. If the Watch dies before the newest snapshot reaches the phone, that untransferred data cannot be recovered until the Watch can communicate again. There is no automatic real-time sync in this version.
+
+The iPhone record is saved atomically every ~10 seconds while foregrounded, on GPS updates, and on scene changes; iOS background location callbacks also persist it when delivered. Files named `current-phone-hike.json` and `phone-hike-*.json` are visible via Files/Watch Climber. Physical device tests must verify background execution and battery impact. This update has not been deployed to TestFlight and requires a successful iOS/watchOS simulator build and signed distribution.
