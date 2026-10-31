@@ -29,12 +29,13 @@ struct WatchClimberPhoneApp: App {
     }
 }
 
-private enum PhoneTab: Hashable { case hike, terrain, track, watchRecords }
+private enum PhoneTab: Hashable { case hike, terrain, profile, track, watchRecords }
 
 struct PhoneClimberView: View {
     @ObservedObject var monitor: PhoneHikeMonitor
     @ObservedObject var transfer: RecordTransfer
     @State private var tab: PhoneTab = .hike
+    @State private var inspection = RouteInspection()
     @State private var confirmEnd = false
     @State private var importFile: RecordExportFile?
     @State private var importError: String?
@@ -45,6 +46,8 @@ struct PhoneClimberView: View {
                 .tabItem { Label("状況", systemImage: "figure.hiking") }.tag(PhoneTab.hike)
             NavigationStack { terrainPage.navigationTitle("3D地形") }
                 .tabItem { Label("地形", systemImage: "mountain.2") }.tag(PhoneTab.terrain)
+            NavigationStack { profilePage.navigationTitle("標高断面") }
+                .tabItem { Label("断面", systemImage: "chart.xyaxis.line") }.tag(PhoneTab.profile)
             NavigationStack { trackPage.navigationTitle("軌跡") }
                 .tabItem { Label("軌跡", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }.tag(PhoneTab.track)
             NavigationStack { watchRecords.navigationTitle("Watchの記録") }
@@ -100,7 +103,13 @@ struct PhoneClimberView: View {
                     LabeledContent("距離", value: String(format: "%.2f km", monitor.record.distance / 1000))
                     LabeledContent("時間", value: String(format: "%d:%02d",
                         Int(monitor.record.elapsed)/3600, Int(monitor.record.elapsed)/60%60))
-                    LabeledContent("心拍", value: "— （Watch側のみ）")
+                    LabeledContent("心拍", value: transfer.currentHeartRate(at: timeline.date).map {
+                        "\(Int($0)) bpm"
+                    } ?? "—")
+                    if transfer.currentHeartRate(at: timeline.date) == nil {
+                        Text("心拍はApple Watchから受信。30秒以上更新がない場合は非表示")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 Section("操作") {
                     Text(stateText).font(.headline)
@@ -121,6 +130,16 @@ struct PhoneClimberView: View {
                         Button("保存を再試行") { monitor.persist() }
                     }
                 }
+                Section("記録ファイル") {
+                    if let url = monitor.savedFile {
+                        ShareLink(item: RawRecordShare(url: url),
+                                  preview: SharePreview("iPhone登山記録.json")) {
+                            Label("iPhoneの記録を共有・保存", systemImage: "square.and.arrow.up")
+                        }
+                    } else {
+                        Text("記録開始後にファイルを書き出せます").foregroundStyle(.secondary)
+                    }
+                }
                 Section {
                     Text("記録中はiPhoneの位置情報をバックグラウンドでも更新します。Watchと二重に記録する場合は距離が合算されません。切替時はWatchを一時停止してください。")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -138,13 +157,38 @@ struct PhoneClimberView: View {
         }
     }
 
+
     private var terrainPage: some View {
-        Group {
-            if let terrain = monitor.terrain {
-                PhoneTerrainView(terrain: terrain, fix: monitor.fix)
-            } else {
-                ContentUnavailableView("地形データなし", systemImage: "mountain.2", description: Text("DEMを読み込めません"))
+        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+            Group {
+                if let terrain = monitor.terrain {
+                    let display = monitor.route.map {
+                        RouteDisplayContext(route: $0, fix: monitor.fix,
+                                            now: timeline.date,
+                                            progressHintM: monitor.record.distance,
+                                            inspection: inspection)
+                    }
+                    PhoneTerrainView(terrain: terrain, route: monitor.route,
+                                     display: display, fix: monitor.fix, inspection: $inspection)
+                } else {
+                    ContentUnavailableView("地形データなし", systemImage: "mountain.2",
+                                           description: Text("DEMを読み込めません"))
+                }
             }
+        }
+    }
+
+    private var profilePage: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+            let display = monitor.route.map {
+                RouteDisplayContext(route: $0, fix: monitor.fix,
+                                    now: timeline.date,
+                                    progressHintM: monitor.record.distance,
+                                    inspection: inspection)
+            }
+            PhoneElevationProfileView(route: monitor.route, display: display,
+                                      record: monitor.record, terrain: monitor.terrain,
+                                      inspection: $inspection)
         }
     }
 

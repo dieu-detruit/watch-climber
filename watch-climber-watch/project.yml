@@ -64,10 +64,13 @@ targets:
       - ContainerResources
       - Sources/HikeRecord.swift
       - Sources/Terrain.swift
+      - Sources/PlannedRoute.swift
+      - Sources/RouteDisplayContext.swift
       - path: ../public/terrain/goryu.json
         buildPhase: resources
       - path: ../public/terrain/hanno.json
         buildPhase: resources
+      - Resources/goryu-course.json
     info:
       path: Generated/Container-Info.plist
       properties:

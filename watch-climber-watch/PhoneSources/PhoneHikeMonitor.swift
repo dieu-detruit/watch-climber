@@ -7,6 +7,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
     @Published private(set) var fix: Fix?
     @Published private(set) var record = HikeRecord()
     @Published private(set) var terrain: Terrain? = Terrain.load(named: "hanno") ?? Terrain.load()
+    @Published private(set) var route: PlannedRoute?
     private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     @Published private(set) var locationStatus = "位置情報を確認中"
     @Published private(set) var saveError: String?
@@ -36,6 +37,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                 saveError = "既存のiPhone記録を読み込めません。ファイルを保護するため書き込みを停止しました"
             }
         }
+        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : nil
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         location.distanceFilter = 5
@@ -79,6 +81,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                        $0.grid(latitude: next.latitude, longitude: next.longitude) != nil
                    }), selected.name != self.terrain?.name {
                     self.terrain = selected
+                    self.route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : nil
                 }
                 self.locationStatus = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
@@ -140,6 +143,10 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
         } catch {
             saveError = "iPhone記録の保存失敗: \(error.localizedDescription)"
         }
+    }
+
+    var savedFile: URL? {
+        FileManager.default.fileExists(atPath: currentURL.path) ? currentURL : nil
     }
 
     private func write(_ value: HikeRecord) throws {

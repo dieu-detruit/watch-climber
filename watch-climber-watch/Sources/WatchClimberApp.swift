@@ -9,6 +9,9 @@ struct WatchClimberApp: App {
         WindowGroup {
             ClimberView(monitor: monitor, transfer: transfer)
                 .task { monitor.requestLocation() }
+                .onReceive(monitor.$heartRate) { bpm in
+                    transfer.publishHeartRate(bpm)
+                }
                 .onChange(of: phase) { _, next in
                     if next == .active { monitor.requestLocation() }
                     else { monitor.persist() }

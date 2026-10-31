@@ -5,6 +5,40 @@ import WatchConnectivity
 final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var status = "WatchとiPhoneのアプリを開いてください"
     @Published private(set) var received: [RecordExportFile] = []
+    @Published private(set) var liveHeartRate: Double?
+    @Published private(set) var liveHeartDate: Date?
+
+    func currentHeartRate(at date: Date) -> Double? {
+        guard let bpm = liveHeartRate, let measured = liveHeartDate,
+              date.timeIntervalSince(measured) >= -5,
+              date.timeIntervalSince(measured) < 30 else { return nil }
+        return bpm
+    }
+
+    /// Watch sensor is the live source; iPhone never claims to have a heart-rate sensor.
+    func publishHeartRate(_ bpm: Double?, at date: Date = Date()) {
+        #if os(watchOS)
+        guard let session, session.activationState == .activated,
+              let bpm, bpm.isFinite, bpm >= 25, bpm <= 250 else { return }
+        let value: [String: Any] = ["kind": "live-heart", "bpm": bpm,
+                                    "measuredAt": date.timeIntervalSince1970]
+        if session.isReachable { session.sendMessage(value, replyHandler: nil, errorHandler: nil) }
+        try? session.updateApplicationContext(value)
+        #endif
+    }
+
+    private func receiveHeartRate(_ message: [String: Any]) {
+        #if os(iOS)
+        guard message["kind"] as? String == "live-heart",
+              let bpm = message["bpm"] as? Double, bpm.isFinite, bpm >= 25, bpm <= 250,
+              let epoch = message["measuredAt"] as? Double, epoch.isFinite else { return }
+        let date = Date(timeIntervalSince1970: epoch)
+        guard abs(date.timeIntervalSinceNow) < 60,
+              date > (liveHeartDate ?? .distantPast) else { return }
+        liveHeartRate = bpm
+        liveHeartDate = date
+        #endif
+    }
     private let documents: URL
     private let store: RecordExportStore
     private var session: WCSession?
@@ -139,6 +173,15 @@ final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
             DispatchQueue.main.async { self.status = "受信・保存失敗: \(error.localizedDescription)。もう一度取り出してください" }
         }
         #endif
+    }
+
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        DispatchQueue.main.async { self.receiveHeartRate(message) }
+    }
+
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        DispatchQueue.main.async { self.receiveHeartRate(applicationContext) }
     }
 
     func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
