@@ -52,7 +52,11 @@ enum GPXRouteImporter {
             guard let best=fixes.indices.min(by:{
                 fixes[$0].distance(to:target)<fixes[$1].distance(to:target)
             }), fixes[best].distance(to:target)<=400 else {continue}
-            let h=points[best]["altitude"] as? Double ?? 0
+            let ground = terrain.grid(latitude: landmark.latitude,
+                                      longitude: landmark.longitude).flatMap {
+                terrain.height(x: $0.x, y: $0.y)
+            }
+            let h = ground ?? (points[best]["altitude"] as? Double ?? 0)
             landmarks.append(["name":landmark.name,"pointIndex":best,
                               "position":["latitude":landmark.latitude,
                                           "longitude":landmark.longitude,

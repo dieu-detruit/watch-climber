@@ -33,6 +33,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     init(directory: URL) {
         storageURL = directory.appendingPathComponent("current-hike.json")
         super.init()
+        route = ImportedRouteStore.load()
         // Preserve the exact on-device bytes before restore changes state or any
         // scene/timer callback can save. A failed backup must never permit writes.
         do {
@@ -64,6 +65,10 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
         }
     }
 
+    func refreshRoute() {
+        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
+    }
+
     private func selectTerrain(for fix: Fix) {
         guard fix.usable,
               let selected = terrainOptions.first(where: {
@@ -71,7 +76,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
               }),
               selected.name != terrain?.name else { return }
         terrain = selected
-        route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : nil
+        route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
     }
 
     func requestLocation() {

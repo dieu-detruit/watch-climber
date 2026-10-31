@@ -104,7 +104,8 @@ struct PhoneElevationProfileView: View {
                     Text("今回の飯能の予定ルートは、正確なGPX軌跡がまだありません。地点間を直線で結んだ偽の断面は表示しません。")
                         .font(.footnote).foregroundStyle(.secondary)
                     if terrain?.name.hasPrefix("飯能")==true {
-                        ForEach(Array(HannoLandmarks.ordered.enumerated()),id:\.offset) { _,landmark in
+                        ForEach(HannoLandmarks.ordered.indices,id: \.self) { index in
+                            let landmark = HannoLandmarks.ordered[index]
                             HStack {
                                 Text(landmark.name)
                                 Spacer()
@@ -147,8 +148,8 @@ private struct RecordedElevationProfile:View {
                 }
                 if points.count>1 {
                     Canvas { context,size in
-                        let low=points.map(\.1).min() ?? 0
-                        let high=points.map(\.1).max() ?? low+1
+                        let low=points.map { $0.1 }.min() ?? 0
+                        let high=points.map { $0.1 }.max() ?? low+1
                         let start=points[0].0.timeIntervalSince1970
                         let span=max(1,points[points.count-1].0.timeIntervalSince1970-start)
                         var path=Path()

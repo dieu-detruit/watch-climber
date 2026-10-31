@@ -37,7 +37,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                 saveError = "既存のiPhone記録を読み込めません。ファイルを保護するため書き込みを停止しました"
             }
         }
-        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : nil
+        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         location.distanceFilter = 5
@@ -81,7 +81,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                        $0.grid(latitude: next.latitude, longitude: next.longitude) != nil
                    }), selected.name != self.terrain?.name {
                     self.terrain = selected
-                    self.route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : nil
+                    self.route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
                 }
                 self.locationStatus = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
@@ -143,6 +143,15 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
         } catch {
             saveError = "iPhone記録の保存失敗: \(error.localizedDescription)"
         }
+    }
+
+    func importGPX(_ data: Data) throws {
+        guard let elevation = Terrain.load(named: "hanno") else { throw ImportedRouteError.invalid }
+        let bytes = try GPXRouteImporter.convert(data, terrain: elevation)
+        try ImportedRouteStore.save(bytes)
+        terrain = elevation
+        route = try ImportedRouteStore.validate(bytes)
+        infoMessage = "GPXを読み込みました。Watch側への転送を確認してください"
     }
 
     var savedFile: URL? {

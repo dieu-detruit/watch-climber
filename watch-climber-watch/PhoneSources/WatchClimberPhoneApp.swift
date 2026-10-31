@@ -39,6 +39,7 @@ struct PhoneClimberView: View {
     @State private var confirmEnd = false
     @State private var importFile: RecordExportFile?
     @State private var importError: String?
+    @State private var showGPXImporter = false
 
     var body: some View {
         TabView(selection: $tab) {
@@ -73,7 +74,21 @@ struct PhoneClimberView: View {
         } message: {
             Text("まずWatchで記録を一時停止し、最新のJSONがiPhoneに保存されたことを確認してください。未転送分は引き継げません。")
         }
-        .alert("引き継ぎ失敗", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+        .fileImporter(isPresented: $showGPXImporter,
+                      allowedContentTypes: [.xml, .data, UTType(filenameExtension: "gpx") ?? .xml]) { result in
+            do {
+                let url = try result.get()
+                let scope = url.startAccessingSecurityScopedResource()
+                defer { if scope { url.stopAccessingSecurityScopedResource() } }
+                let bytes = try Data(contentsOf: url)
+                try monitor.importGPX(bytes)
+                try transfer.sendHannoRoute()
+                tab = .profile
+            } catch {
+                importError = error.localizedDescription
+            }
+        }
+        .alert("取り込み失敗", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
             Button("閉じる", role: .cancel) { importError = nil }
         } message: { Text(importError ?? "") }
     }
@@ -129,6 +144,15 @@ struct PhoneClimberView: View {
                         Text(error).font(.footnote).foregroundStyle(.orange)
                         Button("保存を再試行") { monitor.persist() }
                     }
+                }
+                Section("予定ルート") {
+                    Button("GPXファイルを取り込む", systemImage: "square.and.arrow.down") {
+                        showGPXImporter = true
+                    }
+                    Text(monitor.route?.name ?? "正確なルートのGPX未登録")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Text(transfer.routeSyncStatus)
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("記録ファイル") {
                     if let url = monitor.savedFile {

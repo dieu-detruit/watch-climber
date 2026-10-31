@@ -12,6 +12,12 @@ struct WatchClimberApp: App {
                 .onReceive(monitor.$heartRate) { bpm in
                     transfer.publishHeartRate(bpm)
                 }
+                .onReceive(monitor.$record) { value in
+                    if value.state == .recording { transfer.autoSyncCurrentRecord() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: ImportedRouteStore.routeChanged)) { _ in
+                    monitor.refreshRoute()
+                }
                 .onChange(of: phase) { _, next in
                     if next == .active { monitor.requestLocation() }
                     else { monitor.persist() }

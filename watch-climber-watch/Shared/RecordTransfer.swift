@@ -5,6 +5,7 @@ import WatchConnectivity
 final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var status = "WatchとiPhoneのアプリを開いてください"
     @Published private(set) var received: [RecordExportFile] = []
+    @Published private(set) var routeSyncStatus = "GPXを取り込むとWatchに送信します"
     @Published private(set) var liveHeartRate: Double?
     @Published private(set) var liveHeartDate: Date?
 
@@ -46,6 +47,7 @@ final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
     private var expectedIDs = Set<String>()
     private var confirmedIDs = Set<String>()
     private var expectedReceipts = Set<String>()
+    private var lastAutomaticSnapshot = Date.distantPast
 
     override init() {
         let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -61,6 +63,45 @@ final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
         session = .default
         session?.delegate = self
         session?.activate()
+    }
+
+
+    /// Only the newest current snapshot is queued automatically, at most once
+    /// every two minutes. This allows a phone fallback when the Watch battery
+    /// runs out, without claiming to be an always-current mirror.
+    func autoSyncCurrentRecord() {
+        #if os(watchOS)
+        guard Date().timeIntervalSince(lastAutomaticSnapshot) >= 120,
+              let session, session.activationState == .activated,
+              session.isCompanionAppInstalled,
+              session.outstandingFileTransfers.count < 4 else { return }
+        do {
+            let files = try store.snapshotRecords(in: documents)
+            guard let current = files.first(where: { $0.originalName == "current-hike.json" }) else { return }
+            var metadata = current.metadata
+            metadata["requestID"] = UUID().uuidString
+            session.transferFile(current.url, metadata: metadata)
+            lastAutomaticSnapshot = Date()
+        } catch {
+            status = "自動バックアップの準備に失敗: \(error.localizedDescription)"
+        }
+        #endif
+    }
+
+    func sendHannoRoute() throws {
+        #if os(iOS)
+        guard let session, session.activationState == .activated,
+              session.isPaired, session.isWatchAppInstalled else {
+            routeSyncStatus = "Watchアプリとの接続を確認してください"
+            return
+        }
+        let url = ImportedRouteStore.destination()
+        let bytes = try Data(contentsOf: url)
+        _ = try ImportedRouteStore.validate(bytes)
+        session.transferFile(url, metadata: ["kind": "hanno-route",
+                                             "sha256": RecordExportFile.digest(bytes)])
+        routeSyncStatus = "ルートをWatchへ転送待ちです"
+        #endif
     }
 
     /// UI entry point, always called on the main thread.
@@ -152,10 +193,34 @@ final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
             default: break
             }
             #endif
+            #if os(iOS)
+            switch userInfo["kind"] as? String {
+            case "hanno-route-saved": self.routeSyncStatus = "Watchにもルートを保存しました"
+            case "hanno-route-failed": self.routeSyncStatus = "Watchでルート保存に失敗しました。再送してください"
+            default: break
+            }
+            #endif
         }
     }
 
     func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        #if os(watchOS)
+        guard file.metadata?["kind"] as? String == "hanno-route" else { return }
+        do {
+            let bytes = try Data(contentsOf: file.fileURL)
+            guard let expected = file.metadata?["sha256"] as? String,
+                  RecordExportFile.digest(bytes) == expected else {
+                throw RecordExportError.integrityMismatch
+            }
+            try ImportedRouteStore.save(bytes)
+            session.transferUserInfo(["kind": "hanno-route-saved"])
+        } catch {
+            session.transferUserInfo(["kind": "hanno-route-failed"])
+            DispatchQueue.main.async {
+                self.status = "ルート保存失敗: \(error.localizedDescription)"
+            }
+        }
+        #else
         #if os(iOS)
         do {
             // MUST stay synchronous: WCSession deletes this temporary file after return.
@@ -172,6 +237,7 @@ final class RecordTransfer: NSObject, ObservableObject, WCSessionDelegate {
             session.transferUserInfo(["kind": "receive-failed"])
             DispatchQueue.main.async { self.status = "受信・保存失敗: \(error.localizedDescription)。もう一度取り出してください" }
         }
+        #endif
         #endif
     }
 
