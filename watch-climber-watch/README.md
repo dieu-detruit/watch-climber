@@ -54,3 +54,17 @@ Terrain switches automatically when GPS enters either bundled area (Hanno or Gor
 The itinerary source matches YAMAP activity https://yamap.com/activities/30004172 (10.7 km, 465 m ascent), but exact GPS track data is **not** in the source PDF screenshot. YAMAP requires Premium for downloading another user's GPX. Therefore the route polyline and elevation profile have not been invented. Other available Watch functions remain intact, including GPS elevation, ascent, distance, heart rate and recording.
 
 GSI sources: https://maps.gsi.go.jp/development/ichiran.html and https://maps.gsi.go.jp/development/demtile.html . Landmark georeferencing: Hanno Station/Onsen (MapFan), summit points (Zekkei.info), Doremifa Bridge (public geotagged hiking report, Yamakei Online).
+
+## Full iPhone/Watch parity (2026-11-01)
+
+The iPhone app now includes the following views, modelled on the Watch screens:
+
+- Status: live Core Location altitude, elapsed time, distance, cumulative ascent, and fresh Watch heart rate via WatchConnectivity (unavailable when Watch stops sending).
+- Offline 3D DEM (GSI): drag to rotate, pinch to zoom, tap an actual GPX/course line to inspect a position, slider to scrub; select GPS following again. Hanno and Goryu elevation data are bundled.
+- Planned route elevation profile: scrub with a finger or slider, jump between actual route landmarks, show live GPS position when matched.
+- Recorded elevation profile and GPS track, with gaps kept separate.
+- Start/pause/resume/finish and atomic local JSON record export, background GPS while recording.
+- Verified Watch JSON retrieval, manual handoff, automatic Watch snapshots about every two minutes, and iPhone import.
+- Import a Hanno GPX from Files on iPhone. The route is checked against the bundled Hanno DEM, saved offline, and transferred to the paired Watch using WatchConnectivity. Watch opens the same imported route while retaining its native Crown gestures.
+
+**Important:** Hanno's five landmark POIs and the GSI terrain are bundled, but a faithful trail line is not supplied by the schematic PDF. The actual activity trail requires a genuine GPX export from YAMAP or another trusted source. The app never joins those POIs into an invented walking trail. YAMAP may require premium membership to export another person's activity track. This feature has not yet been validated on physical paired devices. Install only after current Xcode checks and TestFlight distribution succeed.

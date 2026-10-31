@@ -1,5 +1,4 @@
 import Foundation
-import FoundationXML
 
 /// Parses GPX trkpt/rtept coordinates. It never guesses a trail between POIs.
 /// Elevation uses the GPX values, or GSI DEM where GPX has no elevation.

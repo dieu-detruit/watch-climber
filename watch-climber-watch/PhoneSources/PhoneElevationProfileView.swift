@@ -142,21 +142,23 @@ private struct RecordedElevationProfile:View {
                 Text("記録を開始すると、ここに標高の推移が表示されます。")
                     .font(.footnote).foregroundStyle(.secondary)
             } else {
-                let points=record.points.compactMap { point -> (Date,Double)? in
-                    guard let h=point.fix.altitude else{return nil}
-                    return (point.fix.date,h)
-                }
-                if points.count>1 {
+                let points=record.points
+                let elevations=points.compactMap { $0.fix.altitude }
+                if points.count>1 && elevations.count>1 {
                     Canvas { context,size in
-                        let low=points.map { $0.1 }.min() ?? 0
-                        let high=points.map { $0.1 }.max() ?? low+1
-                        let start=points[0].0.timeIntervalSince1970
-                        let span=max(1,points[points.count-1].0.timeIntervalSince1970-start)
+                        let low=elevations.min() ?? 0
+                        let high=elevations.max() ?? low+1
+                        let start=points[0].fix.date.timeIntervalSince1970
+                        let span=max(1,points[points.count-1].fix.date.timeIntervalSince1970-start)
                         var path=Path()
-                        for (i,p) in points.enumerated() {
-                            let pt=CGPoint(x:(p.0.timeIntervalSince1970-start)/span*Double(size.width),
-                                           y:Double(size.height)-8-(p.1-low)/max(1,high-low)*Double(size.height-20))
-                            if i==0 {path.move(to:pt)}else{path.addLine(to:pt)}
+                        var connected=false
+                        for p in points {
+                            guard let altitude=p.fix.altitude else {connected=false;continue}
+                            let pt=CGPoint(x:(p.fix.date.timeIntervalSince1970-start)/span*Double(size.width),
+                                           y:Double(size.height)-8-(altitude-low)/max(1,high-low)*Double(size.height-20))
+                            if p.breakBefore || !connected {path.move(to:pt)}
+                            else{path.addLine(to:pt)}
+                            connected=true
                         }
                         context.stroke(path,with:.color(.mint),lineWidth:2)
                         context.draw(Text("\(Int(high))m").font(.caption2),at:CGPoint(x:25,y:12))

@@ -56,6 +56,8 @@ enum ImportedRouteStore {
             }
         }
         try data.write(to: path, options: .atomic)
-        NotificationCenter.default.post(name: routeChanged, object: nil)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: routeChanged, object: nil)
+        }
     }
 }

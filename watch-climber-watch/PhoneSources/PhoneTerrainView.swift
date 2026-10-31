@@ -204,7 +204,8 @@ struct PhoneTerrainView: View {
         }
         for face in faces.sorted(by: { $0.depth < $1.depth }) {
             var path = Path(); path.addLines(face.vertices); path.closeSubpath()
-            let level = min(1,max(0,(face.height-700)/2200))
+            let range=max(20,terrain.heightRange[1]-terrain.heightRange[0])
+            let level=min(1,max(0,(face.height-terrain.heightRange[0])/range))
             context.fill(path,with: .color(Color(hue: 0.43-level*0.12,
                                                saturation: 0.5-level*0.25,brightness: 0.28+level*0.5)))
             context.stroke(path,with:.color(.black.opacity(0.16)),lineWidth:0.3)

@@ -153,6 +153,12 @@ struct PhoneClimberView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Text(transfer.routeSyncStatus)
                         .font(.footnote).foregroundStyle(.secondary)
+                    if ImportedRouteStore.load() != nil {
+                        Button("WatchへGPXを再送", systemImage: "arrow.clockwise") {
+                            do { try transfer.sendHannoRoute() }
+                            catch { importError = error.localizedDescription }
+                        }
+                    }
                 }
                 Section("記録ファイル") {
                     if let url = monitor.savedFile {
@@ -261,6 +267,10 @@ struct PhoneClimberView: View {
                 ForEach(transfer.received) { file in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(file.originalName).font(.subheadline).textSelection(.enabled)
+                        if let date = (try? file.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate {
+                            Text(date, format: .dateTime.year().month().day().hour().minute())
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         Text("\(file.byteCount) bytes · SHA-256 \(file.sha256.prefix(12))…")
                             .font(.caption).foregroundStyle(.secondary)
                         HStack {

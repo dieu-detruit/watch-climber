@@ -86,7 +86,12 @@ final class RecordExportStore {
                 let bytes = try Data(contentsOf: url)
                 guard RecordExportFile.digest(bytes) == digest else { throw RecordExportError.integrityMismatch }
                 return RecordExportFile(url: url, originalName: name, sha256: digest, byteCount: bytes.count)
-            }.sorted { $0.url.lastPathComponent < $1.url.lastPathComponent }
+            }.sorted { left, right in
+                let leftDate = (try? left.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                let rightDate = (try? right.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                if leftDate == rightDate { return left.url.lastPathComponent > right.url.lastPathComponent }
+                return leftDate > rightDate
+            }
     }
 
     private func requireRegularFile(_ url: URL) throws {
