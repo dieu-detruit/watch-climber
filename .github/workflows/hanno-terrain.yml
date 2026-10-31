@@ -1,0 +1,34 @@
+name: Download Hanno offline DEM
+on:
+  push:
+    branches: [feature/iphone-hike-fallback-20261101]
+    paths:
+      - 'scripts/fetch-hanno-terrain.mjs'
+      - '.github/workflows/hanno-terrain.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Retrieve original GSI tiles and build offline grid
+        run: node scripts/fetch-hanno-terrain.mjs
+      - name: Commit verified dataset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/terrain/hanno.json public/terrain/hanno-sources.json public/terrain/hanno-tiles
+          if git diff --cached --quiet; then
+            echo "No terrain changes"
+          else
+            git commit -m "Bundle GSI DEM10B elevation data for Hanno hiking"
+            git push origin HEAD:feature/iphone-hike-fallback-20261101
+          fi
