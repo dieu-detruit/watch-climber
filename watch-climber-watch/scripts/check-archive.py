@@ -30,6 +30,12 @@ assert info['CFBundleIdentifier'].startswith(phone_info['CFBundleIdentifier'] + 
 assert 'workout-processing' in info['WKBackgroundModes']
 terrain = json.loads((watch / 'goryu.json').read_text())
 assert len(terrain['heights']) == terrain['columns'] * terrain['rows']
+for app in (watch, container):
+    hanno = json.loads((app / 'hanno.json').read_text())
+    assert hanno['name'].startswith('飯能')
+    assert hanno['columns'] == 640 and hanno['rows'] == 640
+    assert len(hanno['heights']) == 640 * 640
+    assert hanno['missingCells'] < 640 * 640 * 0.4
 route = json.loads((watch / 'goryu-course.json').read_text())
 assert route['id'] == 'goryu-tomi-out-and-back'
 assert route['sourceUrl'] == 'https://yamap.com/'

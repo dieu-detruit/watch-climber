@@ -14,7 +14,7 @@ struct PhoneTerrainView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("五竜岳周辺 · 国土地理院DEM10B")
+            Text("\(terrain.name) · 国土地理院DEM10B")
                 .font(.subheadline).foregroundStyle(.secondary)
             Canvas { context, size in
                 let center = position ?? (Double(terrain.columns - 1) / 2, Double(terrain.rows - 1) / 2)
@@ -66,6 +66,17 @@ struct PhoneTerrainView: View {
                     context.fill(path, with: .color(Color(hue: 0.43-level*0.12, saturation: 0.5-level*0.25, brightness: 0.28+level*0.5)))
                     context.stroke(path, with: .color(.black.opacity(0.16)), lineWidth: 0.3)
                 }
+                if terrain.name.hasPrefix("飯能") {
+                    for landmark in HannoLandmarks.ordered {
+                        guard let p = terrain.grid(latitude: landmark.latitude, longitude: landmark.longitude),
+                              let height = terrain.height(x: p.x, y: p.y) else { continue }
+                        let (point, _) = project(p.x, p.y, height)
+                        let dot = Path(ellipseIn: CGRect(x: point.x-4, y: point.y-4, width: 8, height: 8))
+                        context.fill(dot, with: .color(.orange))
+                        context.draw(Text(landmark.shortName).font(.system(size: 11)).foregroundColor(.white),
+                                     at: CGPoint(x: point.x, y: point.y - 13))
+                    }
+                }
                 if let p = position, let height = terrain.height(x: p.x, y: p.y) {
                     let (point, _) = project(p.x, p.y, height)
                     let dot = Path(ellipseIn: CGRect(x: point.x-6, y: point.y-6, width: 12, height: 12))
@@ -84,7 +95,7 @@ struct PhoneTerrainView: View {
                 Text("拡大")
                 Slider(value: $zoom, in: 0.7...12)
             }
-            Text(position == nil ? "現在地は五竜岳の地形範囲外です。3D表示に現在地を描きません。" : "緑: iPhoneのGPS現在地")
+            Text(position == nil ? "現在地は表示中の地形範囲外、またはGPS未取得です。" : "緑: iPhoneのGPS現在地 · 橙: 名所（道順ではありません）")
                 .font(.footnote).foregroundStyle(.secondary)
             Spacer()
         }

@@ -6,6 +6,8 @@ import CoreLocation
 final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var fix: Fix?
     @Published private(set) var record = HikeRecord()
+    @Published private(set) var terrain: Terrain? = Terrain.load(named: "hanno") ?? Terrain.load()
+    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     @Published private(set) var locationStatus = "位置情報を確認中"
     @Published private(set) var saveError: String?
     @Published private(set) var infoMessage: String?
@@ -72,6 +74,12 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                                altitude: value.verticalAccuracy >= 0 && value.verticalAccuracy <= 50 ? value.altitude : nil,
                                accuracy: value.horizontalAccuracy)
                 self.fix = next
+                if next.usable,
+                   let selected = self.terrainOptions.first(where: {
+                       $0.grid(latitude: next.latitude, longitude: next.longitude) != nil
+                   }), selected.name != self.terrain?.name {
+                    self.terrain = selected
+                }
                 self.locationStatus = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
             }

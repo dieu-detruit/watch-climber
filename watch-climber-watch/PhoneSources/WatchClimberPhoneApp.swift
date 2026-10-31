@@ -140,7 +140,7 @@ struct PhoneClimberView: View {
 
     private var terrainPage: some View {
         Group {
-            if let terrain = Terrain.load() {
+            if let terrain = monitor.terrain {
                 PhoneTerrainView(terrain: terrain, fix: monitor.fix)
             } else {
                 ContentUnavailableView("地形データなし", systemImage: "mountain.2", description: Text("DEMを読み込めません"))

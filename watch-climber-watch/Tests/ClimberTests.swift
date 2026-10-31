@@ -2,6 +2,18 @@ import XCTest
 @testable import WatchClimber
 
 final class ClimberTests: XCTestCase {
+    func testBundledHannoTerrainCoversAllItineraryLandmarks() throws {
+        let terrain = try XCTUnwrap(Terrain.load(named: "hanno"))
+        XCTAssertEqual(terrain.columns, 640)
+        XCTAssertEqual(terrain.rows, 640)
+        XCTAssertEqual(terrain.heights.count, 640 * 640)
+        for landmark in HannoLandmarks.ordered {
+            let grid = try XCTUnwrap(terrain.grid(latitude: landmark.latitude, longitude: landmark.longitude),
+                                     "Missing \(landmark.name)")
+            XCTAssertNotNil(terrain.height(x: grid.x, y: grid.y), "No DEM at \(landmark.name)")
+        }
+    }
+
     func testActualDEMPixelCoordinates() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "goryu", withExtension: "json"))
         let terrain = try JSONDecoder().decode(Terrain.self, from: Data(contentsOf: url))

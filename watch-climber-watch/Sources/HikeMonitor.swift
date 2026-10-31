@@ -12,8 +12,9 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     @Published var saveMessage: String?
     @Published var starting = false
     @Published var finishing = false
-    let terrain = Terrain.load()
-    let route = PlannedRoute.load()
+    @Published var terrain: Terrain? = Terrain.load(named: "hanno") ?? Terrain.load()
+    @Published var route: PlannedRoute?
+    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     private let location = CLLocationManager()
     private let health = HKHealthStore()
     private var workout: HKWorkoutSession?
@@ -63,6 +64,16 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
         }
     }
 
+    private func selectTerrain(for fix: Fix) {
+        guard fix.usable,
+              let selected = terrainOptions.first(where: {
+                  $0.grid(latitude: fix.latitude, longitude: fix.longitude) != nil
+              }),
+              selected.name != terrain?.name else { return }
+        terrain = selected
+        route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : nil
+    }
+
     func requestLocation() {
         switch location.authorizationStatus {
         case .notDetermined: location.requestWhenInUseAuthorization()
@@ -85,6 +96,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
                                altitude: value.verticalAccuracy >= 0 && value.verticalAccuracy <= 50 ? value.altitude : nil,
                                accuracy: value.horizontalAccuracy)
                 self.fix = next
+                self.selectTerrain(for: next)
                 self.locationMessage = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
             }

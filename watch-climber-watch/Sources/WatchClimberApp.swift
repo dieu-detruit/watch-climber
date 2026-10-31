@@ -41,7 +41,16 @@ struct ClimberView: View {
                 } else { Text("地形データを読み込めません").tag(1) }
                 if let route = monitor.route, let display {
                     ElevationProfileView(route: route, display: display, isActive: page == 2, inspection: $inspection).tag(2)
-                } else { Text("コースデータを読み込めません").font(.caption).tag(2) }
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("飯能の山と温泉").font(.headline)
+                            Text("飯能駅 → 吾妻峡 → 多峯主山 → 天覧山 → 宮沢湖温泉")
+                            Text("通過地点は3D地形に表示。正確なGPXが未登録のため、登山道の線とコース断面は表示していません。")
+                                .foregroundStyle(.secondary)
+                        }.font(.caption2)
+                    }.tag(2)
+                }
                 track.tag(3)
                 controls.tag(4)
                 ScrollView {
@@ -71,7 +80,7 @@ struct ClimberView: View {
                     Text(altitude.map { String(Int($0)) } ?? "—").font(.system(size: 38, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6)
                     Text("m").foregroundStyle(.secondary)
                 }
-                Text("GPS標高").font(.caption2)
+                Text("GPS標高 · \(monitor.terrain?.name ?? "エリア未取得")").font(.caption2)
                 HStack {
                     metric("上昇", "\(Int(monitor.record.ascent))m")
                     Spacer()

@@ -8,8 +8,8 @@ struct Terrain: Decodable {
     let heights: [Double?]
     let heightRange: [Double]
 
-    static func load() -> Terrain? {
-        guard let url = Bundle.main.url(forResource: "goryu", withExtension: "json"),
+    static func load(named resource: String = "goryu") -> Terrain? {
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let terrain = try? JSONDecoder().decode(Self.self, from: data),
               terrain.columns >= 2, terrain.rows >= 2,

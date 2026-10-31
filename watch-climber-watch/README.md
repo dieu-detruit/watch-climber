@@ -43,3 +43,14 @@ The iPhone companion now offers independent real GPS altitude, elapsed time, hor
 For a battery-safe handoff, **pause the Watch recording first**. While the Watch is still powered, open both apps, use `Watchから取り出す`, wait for iPhone saved confirmation, then select the newest compatible JSON and tap `引き継ぐ`. The imported phone record remains paused until the user taps `記録再開`. The Watch raw JSON stays untouched; the phone archives any previous phone record before replacement, and a new GPS segment starts without drawing a false path across the transfer interval. If the Watch dies before the newest snapshot reaches the phone, that untransferred data cannot be recovered until the Watch can communicate again. There is no automatic real-time sync in this version.
 
 The iPhone record is saved atomically every ~10 seconds while foregrounded, on GPS updates, and on scene changes; iOS background location callbacks also persist it when delivered. Files named `current-phone-hike.json` and `phone-hike-*.json` are visible via Files/Watch Climber. Physical device tests must verify background execution and battery impact. This update has not been deployed to TestFlight and requires a successful iOS/watchOS simulator build and signed distribution.
+
+
+## Hanno (2026-11-01)
+
+Both the Watch and iPhone now package **real GSI DEM10B elevations for Hanno**, including the station, Azuma Gorge / Doremifa Bridge, Tounosuyama, Tenranzan and Miyazawako Onsen. The 5×5 z14 tile window at x=14530–14534, y=6439–6443 yields a 640×640 terrain grid at two-pixel stride, approximately 15 m spacing. Sources and SHA-256 hashes are saved in `public/terrain/hanno-sources.json` with original tiles in `hanno-tiles/`.
+
+Terrain switches automatically when GPS enters either bundled area (Hanno or Goryu). When GPS is unavailable, Hanno terrain appears by default. In Hanno, the 3D map displays landmark pins from cited geographic data, **not** a fabricated hiking trail.
+
+The itinerary source matches YAMAP activity https://yamap.com/activities/30004172 (10.7 km, 465 m ascent), but exact GPS track data is **not** in the source PDF screenshot. YAMAP requires Premium for downloading another user's GPX. Therefore the route polyline and elevation profile have not been invented. Other available Watch functions remain intact, including GPS elevation, ascent, distance, heart rate and recording.
+
+GSI sources: https://maps.gsi.go.jp/development/ichiran.html and https://maps.gsi.go.jp/development/demtile.html . Landmark georeferencing: Hanno Station/Onsen (MapFan), summit points (Zekkei.info), Doremifa Bridge (public geotagged hiking report, Yamakei Online).

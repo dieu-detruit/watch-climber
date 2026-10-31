@@ -18,6 +18,8 @@ targets:
       - Resources
       - path: ../public/terrain/goryu.json
         buildPhase: resources
+      - path: ../public/terrain/hanno.json
+        buildPhase: resources
     info:
       path: Generated/Watch-Info.plist
       properties:
@@ -63,6 +65,8 @@ targets:
       - Sources/HikeRecord.swift
       - Sources/Terrain.swift
       - path: ../public/terrain/goryu.json
+        buildPhase: resources
+      - path: ../public/terrain/hanno.json
         buildPhase: resources
     info:
       path: Generated/Container-Info.plist
