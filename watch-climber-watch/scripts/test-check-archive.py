@@ -32,6 +32,11 @@ class ArchiveChecks(unittest.TestCase):
             (app / 'Info.plist').write_bytes(plistlib.dumps(app_info))
             (app / 'Climber').write_bytes(b'fixture')
         (watch / 'goryu.json').write_text(json.dumps({'columns': 2, 'rows': 2, 'heights': [1]*4}))
+        for app in (watch, container):
+            (app / 'hanno.json').write_text(json.dumps({
+                'name': '飯能周辺', 'columns': 640, 'rows': 640,
+                'missingCells': 0, 'heights': [100.0] * (640 * 640)
+            }))
         if route:
             (watch / 'goryu-course.json').write_bytes((ROOT / 'watch-climber-watch/Resources/goryu-course.json').read_bytes())
         return watch
