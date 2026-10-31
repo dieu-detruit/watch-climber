@@ -30,6 +30,7 @@ struct ClimberView: View {
     @ObservedObject var monitor: HikeMonitor
     @ObservedObject var transfer: RecordTransfer
     @State private var confirmEnd = false
+    @State private var showMountainPicker = false
     @State private var page = 0
     @State private var inspection = RouteInspection()
     @State private var crownMode: TerrainCrownMode = .inspect
@@ -74,16 +75,39 @@ struct ClimberView: View {
             }
             .tabViewStyle(.page)
         }
+        .confirmationDialog("山を切り替える", isPresented: $showMountainPicker) {
+            Button("GPSで自動") { changeMountain(.automatic) }
+            Button("飯能") { changeMountain(.hanno) }
+            Button("五竜岳") { changeMountain(.goryu) }
+            Button("キャンセル", role: .cancel) {}
+        }
         .confirmationDialog("記録を終了しますか？", isPresented: $confirmEnd) {
             Button("終了して保存") { Task { await monitor.finish() } }
             Button("キャンセル", role: .cancel) {}
         }
     }
+    private func changeMountain(_ selection: MountainSelection) {
+        monitor.chooseMountain(selection)
+        inspection.followGPS()
+    }
+
     private func status(at now: Date) -> some View {
         let fresh = monitor.fix.map { now.timeIntervalSince($0.date) < 30 } ?? false
         let altitude = fresh && monitor.fix?.usable == true ? monitor.fix?.altitude : nil
         return ScrollView {
             VStack(alignment: .leading, spacing: 5) {
+                Button {
+                    showMountainPicker = true
+                } label: {
+                    HStack {
+                        Text("山: \(monitor.mountainSelection == .automatic ? "自動" : monitor.mountainSelection.title)")
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                    }
+                }
+                .font(.caption2)
+                .buttonStyle(.bordered)
+                .accessibilityLabel("山を切り替える")
                 Text(fresh ? monitor.locationMessage : "GPS位置更新待ち").font(.caption2).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline) {
                     Text(altitude.map { String(Int($0)) } ?? "—").font(.system(size: 38, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6)
@@ -142,6 +166,9 @@ struct ClimberView: View {
         ScrollView {
             VStack(spacing: 8) {
                 Text(stateLabel).font(.headline)
+                Button("山を切り替える: \(monitor.mountainSelection.title)") {
+                    showMountainPicker = true
+                }.font(.caption2)
                 switch monitor.record.state {
                 case .idle, .finished:
                     Button(monitor.starting ? "開始中…" : "記録開始") { Task { await monitor.start() } }

@@ -12,8 +12,9 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     @Published var saveMessage: String?
     @Published var starting = false
     @Published var finishing = false
-    @Published var terrain: Terrain? = Terrain.load(named: "hanno") ?? Terrain.load()
+    @Published var terrain: Terrain?
     @Published var route: PlannedRoute?
+    @Published private(set) var mountainSelection = MountainSelection.load()
     private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     private let location = CLLocationManager()
     private let health = HKHealthStore()
@@ -33,7 +34,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     init(directory: URL) {
         storageURL = directory.appendingPathComponent("current-hike.json")
         super.init()
-        route = ImportedRouteStore.load()
+        updateMountainDisplay()
         // Preserve the exact on-device bytes before restore changes state or any
         // scene/timer callback can save. A failed backup must never permit writes.
         do {
@@ -69,14 +70,26 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
         route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
     }
 
+    /// Changing the display area never touches current-hike.json or recorded samples.
+    func chooseMountain(_ selection: MountainSelection) {
+        mountainSelection = selection
+        selection.save()
+        updateMountainDisplay()
+    }
+
+    private func updateMountainDisplay() {
+        guard let chosen = mountainSelection.terrain(from: terrainOptions, fix: fix) else { return }
+        if chosen.name != terrain?.name {
+            terrain = chosen
+            refreshRoute()
+        } else if route == nil {
+            refreshRoute()
+        }
+    }
+
     private func selectTerrain(for fix: Fix) {
-        guard fix.usable,
-              let selected = terrainOptions.first(where: {
-                  $0.grid(latitude: fix.latitude, longitude: fix.longitude) != nil
-              }),
-              selected.name != terrain?.name else { return }
-        terrain = selected
-        route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
+        guard mountainSelection == .automatic, fix.usable else { return }
+        updateMountainDisplay()
     }
 
     func requestLocation() {

@@ -43,11 +43,14 @@ struct PhoneClimberView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            NavigationStack { dashboard.navigationTitle("登山") }
+            NavigationStack { dashboard.navigationTitle("登山")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { mountainMenu } } }
                 .tabItem { Label("状況", systemImage: "figure.hiking") }.tag(PhoneTab.hike)
-            NavigationStack { terrainPage.navigationTitle("3D地形") }
+            NavigationStack { terrainPage.navigationTitle("3D地形")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { mountainMenu } } }
                 .tabItem { Label("地形", systemImage: "mountain.2") }.tag(PhoneTab.terrain)
-            NavigationStack { profilePage.navigationTitle("標高断面") }
+            NavigationStack { profilePage.navigationTitle("標高断面")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { mountainMenu } } }
                 .tabItem { Label("断面", systemImage: "chart.xyaxis.line") }.tag(PhoneTab.profile)
             NavigationStack { trackPage.navigationTitle("軌跡") }
                 .tabItem { Label("軌跡", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }.tag(PhoneTab.track)
@@ -93,12 +96,50 @@ struct PhoneClimberView: View {
         } message: { Text(importError ?? "") }
     }
 
+    private func changeMountain(_ selection: MountainSelection) {
+        monitor.chooseMountain(selection)
+        inspection.followGPS()
+    }
+
+    private var mountainMenu: some View {
+        Menu {
+            ForEach(MountainSelection.allCases) { selection in
+                Button {
+                    changeMountain(selection)
+                } label: {
+                    if monitor.mountainSelection == selection {
+                        Label(selection.title, systemImage: "checkmark")
+                    } else {
+                        Text(selection.title)
+                    }
+                }
+            }
+        } label: {
+            Label("山を切り替え", systemImage: "mountain.2")
+        }
+    }
+
     private var dashboard: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             let age = monitor.fix.map { timeline.date.timeIntervalSince($0.date) }
             let fresh = age.map { $0 >= -5 && $0 < 30 } ?? false
             let altitude = fresh && monitor.fix?.usable == true ? monitor.fix?.altitude : nil
             List {
+                Section("表示する山") {
+                    Picker("山", selection: Binding(
+                        get: { monitor.mountainSelection },
+                        set: { changeMountain($0) }
+                    )) {
+                        ForEach(MountainSelection.allCases) { selection in
+                            Text(selection.title).tag(selection)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    Text("選択中: \(monitor.terrain?.name ?? "地形なし")")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Text("山の切り替えは地形と予定ルートの表示のみ変更し、登山記録は変更しません。")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Section("GPS標高") {
                     HStack(alignment: .firstTextBaseline) {
                         Text(altitude.map { String(Int($0)) } ?? "—")

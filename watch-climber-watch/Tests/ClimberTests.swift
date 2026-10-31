@@ -2,6 +2,23 @@ import XCTest
 @testable import WatchClimber
 
 final class ClimberTests: XCTestCase {
+    func testMountainSelectorKeepsBothOfflineDatasetsAndRoutes() throws {
+        let hanno = try XCTUnwrap(Terrain.load(named: "hanno"))
+        let goryu = try XCTUnwrap(Terrain.load(named: "goryu"))
+        let options = [hanno, goryu]
+        let nearHanno = Fix(date: Date(), latitude: 35.861956,
+                            longitude: 139.308293, altitude: 200, accuracy: 5)
+        let nearGoryu = Fix(date: Date(), latitude: 36.65,
+                            longitude: 137.75, altitude: 2000, accuracy: 5)
+
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nearHanno)?.name, hanno.name)
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nearGoryu)?.name, goryu.name)
+        XCTAssertEqual(MountainSelection.hanno.terrain(from: options, fix: nearGoryu)?.name, hanno.name)
+        XCTAssertEqual(MountainSelection.goryu.terrain(from: options, fix: nearHanno)?.name, goryu.name)
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nil)?.name, hanno.name)
+        XCTAssertNotNil(PlannedRoute.load(), "Goryu route must remain bundled")
+    }
+
     func testBundledHannoTerrainCoversAllItineraryLandmarks() throws {
         let terrain = try XCTUnwrap(Terrain.load(named: "hanno"))
         XCTAssertEqual(terrain.columns, 640)

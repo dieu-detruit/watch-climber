@@ -68,3 +68,15 @@ The iPhone app now includes the following views, modelled on the Watch screens:
 - Import a Hanno GPX from Files on iPhone. The route is checked against the bundled Hanno DEM, saved offline, and transferred to the paired Watch using WatchConnectivity. Watch opens the same imported route while retaining its native Crown gestures.
 
 **Important:** Hanno's five landmark POIs and the GSI terrain are bundled, but a faithful trail line is not supplied by the schematic PDF. The actual activity trail requires a genuine GPX export from YAMAP or another trusted source. The app never joins those POIs into an invented walking trail. YAMAP may require premium membership to export another person's activity track. This feature has not yet been validated on physical paired devices. Install only after current Xcode checks and TestFlight distribution succeed.
+
+
+## Selecting a mountain (2026-11-01 update)
+
+Both devices include the Goryu DEM, Goryu planned-route profile, Hanno DEM,
+and any imported Hanno GPX. Nothing is replaced when switching display areas.
+
+- **Watch:** On the first status page, select the "山" button (or use "山を切り替える" on the recording controls page). Choose "GPSで自動", "飯能", or "五竜岳".
+- **iPhone:** On the status tab, select the "表示する山" section. The 3D and profile screens also include a mountain menu in the navigation bar.
+- The choice is retained independently on each device. "GPSで自動" uses a recent valid GPS fix inside one of the two bundled DEMs and defaults to Hanno when neither matches.
+- Manual selection works at home, without being physically near the mountain. Switching changes **only** the terrain and planned route being displayed, never recorded distance, time, altitude, heart rate, saved GPX, or existing JSON histories.
+

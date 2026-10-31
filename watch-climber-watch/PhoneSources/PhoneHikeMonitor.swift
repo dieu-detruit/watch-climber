@@ -6,8 +6,9 @@ import CoreLocation
 final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var fix: Fix?
     @Published private(set) var record = HikeRecord()
-    @Published private(set) var terrain: Terrain? = Terrain.load(named: "hanno") ?? Terrain.load()
+    @Published private(set) var terrain: Terrain?
     @Published private(set) var route: PlannedRoute?
+    @Published private(set) var mountainSelection = MountainSelection.load()
     private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     @Published private(set) var locationStatus = "位置情報を確認中"
     @Published private(set) var saveError: String?
@@ -37,7 +38,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                 saveError = "既存のiPhone記録を読み込めません。ファイルを保護するため書き込みを停止しました"
             }
         }
-        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
+        updateMountainDisplay()
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         location.distanceFilter = 5
@@ -49,6 +50,23 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                 self.record.advanceTime(to: Date())
                 if Date().timeIntervalSince(self.lastSaved) >= 10 { self.persist() }
             }
+        }
+    }
+
+    /// Only changes the visible terrain and planned route; never modifies recording state.
+    func chooseMountain(_ selection: MountainSelection) {
+        mountainSelection = selection
+        selection.save()
+        updateMountainDisplay()
+    }
+
+    private func updateMountainDisplay() {
+        guard let chosen = mountainSelection.terrain(from: terrainOptions, fix: fix) else { return }
+        if chosen.name != terrain?.name {
+            terrain = chosen
+            route = chosen.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
+        } else if route == nil {
+            route = chosen.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
         }
     }
 
@@ -76,12 +94,8 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
                                altitude: value.verticalAccuracy >= 0 && value.verticalAccuracy <= 50 ? value.altitude : nil,
                                accuracy: value.horizontalAccuracy)
                 self.fix = next
-                if next.usable,
-                   let selected = self.terrainOptions.first(where: {
-                       $0.grid(latitude: next.latitude, longitude: next.longitude) != nil
-                   }), selected.name != self.terrain?.name {
-                    self.terrain = selected
-                    self.route = selected.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
+                if self.mountainSelection == .automatic, next.usable {
+                    self.updateMountainDisplay()
                 }
                 self.locationStatus = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
@@ -149,7 +163,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
         guard let elevation = Terrain.load(named: "hanno") else { throw ImportedRouteError.invalid }
         let bytes = try GPXRouteImporter.convert(data, terrain: elevation)
         try ImportedRouteStore.save(bytes)
-        terrain = elevation
+        chooseMountain(.hanno)
         route = try ImportedRouteStore.validate(bytes)
         infoMessage = "GPXを読み込みました。Watch側への転送を確認してください"
     }
