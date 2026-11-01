@@ -9,9 +9,7 @@ for (const match of Array.from(html.matchAll(/<script\b[^>]*\bsrc="([^"]+\.js)"[
   const src = match[1].replace(/^\.\//, "");
   if (src.includes("..") || !src.startsWith("assets/")) throw Error("Unsafe script path");
   const js = await readFile(base + "/" + src, "utf8");
-  // Use a replacement callback: the minified bundle includes html = html.replace(match[0], "<script type=\"module\">\n" +
-    js.replace(/<\/script/gi, "<\\/script") + "\n</script>"); tokens, which
-  // String.replace would otherwise interpolate as the matched <script> tag.
+  // Replacement callback avoids JS bundle interpolation of dollar-sign tokens.
   html = html.replace(match[0], () => "<script type=\"module\">\n" +
     js.replace(/<\/script/gi, "<\\/script") + "\n</script>");
   scriptCount++;
