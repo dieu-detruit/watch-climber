@@ -10,6 +10,10 @@ struct PhoneTerrainView: View {
     let fix: Fix?
     @Binding var inspection: RouteInspection
 
+    // Historical replay is read-only: the original GPS points are not mutated.
+    var archivedPoints: [HikeRecord.Point] = []
+    var replayFix: Fix? = nil
+
     @State private var angle = 0.0
     @State private var zoom = 1.5
     @State private var dragStartAngle: Double?
@@ -23,6 +27,11 @@ struct PhoneTerrainView: View {
         return terrain.grid(latitude: fix.latitude, longitude: fix.longitude)
     }
 
+    private var replayPosition: (x: Double, y: Double)? {
+        guard let replayFix, replayFix.usable else { return nil }
+        return terrain.grid(latitude: replayFix.latitude, longitude: replayFix.longitude)
+    }
+
     private var inspectedPosition: (x: Double, y: Double)? {
         guard let display, display.isInspecting else { return nil }
         return terrain.grid(latitude: display.position.point.latitude,
@@ -31,6 +40,7 @@ struct PhoneTerrainView: View {
 
     private var center: (x: Double, y: Double) {
         if let selected = inspectedPosition { return selected }
+        if let selected = replayPosition { return selected }
         if let selected = livePosition { return selected }
         if let start = route?.points.first,
            let selected = terrain.grid(latitude: start.latitude, longitude: start.longitude) {
@@ -111,6 +121,9 @@ struct PhoneTerrainView: View {
                         Text("次: \(next.name) · \(Int(max(0, route.landmarkDistance(next)-display.position.distanceM))) m")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
+                } else if !archivedPoints.isEmpty {
+                    Text("緑：記録済みGPS軌跡 · 橙：選択中の過去の地点")
+                        .font(.footnote).foregroundStyle(.secondary)
                 } else {
                     Text("正確な登山ルートは未設定。橙色は地点の位置のみで、道順ではありません。")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -164,7 +177,7 @@ struct PhoneTerrainView: View {
                     Label(selectedPlace, systemImage: "mappin")
                         .font(.subheadline)
                 }
-                if livePosition == nil {
+                if livePosition == nil && archivedPoints.isEmpty {
                     Text("現在地の測位なし、または表示中の地形データの範囲外です。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -243,6 +256,37 @@ struct PhoneTerrainView: View {
                 context.draw(Text(landmark.shortName).font(.system(size:11)).foregroundColor(.white),
                              at:CGPoint(x:p.x,y:p.y-13))
             }
+        }
+        if !archivedPoints.isEmpty {
+            var actual = Path()
+            var connected = false
+            // Respect the original segmentation, even when samples are downsampled.
+            let strideSize = max(1, archivedPoints.count / 3000)
+            var lastIndex = -1
+            for index in stride(from: 0, to: archivedPoints.count, by: strideSize) {
+                let point = archivedPoints[index]
+                let skippedGap = lastIndex >= 0 &&
+                    archivedPoints[(lastIndex+1)...index].contains(where: { $0.breakBefore })
+                lastIndex = index
+                guard let grid = terrain.grid(latitude: point.fix.latitude, longitude: point.fix.longitude),
+                      let height = terrain.height(x: grid.x, y: grid.y) else {
+                    connected = false
+                    continue
+                }
+                let p = project(grid.x, grid.y, height, size: size).point
+                if !connected || point.breakBefore || skippedGap { actual.move(to: p) }
+                else { actual.addLine(to: p) }
+                connected = true
+            }
+            context.stroke(actual, with: .color(.mint),
+                           style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round))
+        }
+        if let p=replayPosition,
+           let h=terrain.height(x:p.x,y:p.y) {
+            let point=project(p.x,p.y,h,size:size).point
+            let marker=Path(ellipseIn:CGRect(x:point.x-6,y:point.y-6,width:12,height:12))
+            context.fill(marker,with:.color(.orange))
+            context.stroke(marker,with:.color(.white),lineWidth:2)
         }
         if let p=inspectedPosition,
            let h=terrain.height(x:p.x,y:p.y) {
