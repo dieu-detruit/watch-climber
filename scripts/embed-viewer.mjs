@@ -25,7 +25,9 @@ if (scriptCount !== 1 || styleCount !== 1)
 // Vite may insert module-preload hints. There are no external modules after inlining.
 html = html.replace(/<link\b[^>]*\brel="modulepreload"[^>]*>/g, "");
 // Check leftover asset links before injecting our terrain JSON.
-const leftovers = html.match(/<script\b[^>]*\bsrc="[^"]+"[^>]*>|<link\b[^>]*\brel="(?:stylesheet|modulepreload)"[^>]*>/g);
+// Ignore HTML-looking strings inside the inlined JavaScript bundle itself.
+const outsideScripts = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+const leftovers = outsideScripts.match(/<script\b[^>]*\bsrc="[^"]+"[^>]*>|<link\b[^>]*\brel="(?:stylesheet|modulepreload)"[^>]*>/g);
 if (leftovers) throw Error("Unexpected external resources: " + JSON.stringify(leftovers.slice(0, 8)));
 let terrainScripts = "";
 for (const name of ["hanno", "goryu"]) {
