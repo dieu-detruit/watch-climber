@@ -11,6 +11,33 @@ struct RawRecordShare: Transferable {
     }
 }
 
+struct GPXRecordShare: Transferable {
+    let url: URL
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: UTType(filenameExtension: "gpx") ?? .xml) {
+            SentTransferredFile($0.url)
+        }
+    }
+}
+
+struct CSVRecordShare: Transferable {
+    let url: URL
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .commaSeparatedText) {
+            SentTransferredFile($0.url)
+        }
+    }
+}
+
+struct GeoJSONRecordShare: Transferable {
+    let url: URL
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .json) {
+            SentTransferredFile($0.url)
+        }
+    }
+}
+
 @main
 struct WatchClimberPhoneApp: App {
     @StateObject private var transfer = RecordTransfer()

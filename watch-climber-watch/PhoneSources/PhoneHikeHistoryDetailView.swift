@@ -7,6 +7,8 @@ struct PhoneHikeHistoryDetailView: View {
     @State private var record: HikeRecord?
     @State private var terrain: Terrain?
     @State private var errorMessage: String?
+    @State private var exportedFiles: [String: URL] = [:]
+    @State private var exportError: String?
     @State private var selectedIndex = 0
     @State private var selectedPage: Page = .track
 
@@ -60,10 +62,39 @@ struct PhoneHikeHistoryDetailView: View {
                         }
                     }
 
-                    ShareLink(item: RawRecordShare(url: entry.url),
-                              preview: SharePreview(entry.originalName)) {
-                        Label("元のJSONを共有・ファイルに保存", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(.bordered)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("PCで可視化・解析").font(.headline)
+                        Text("JSONはWatch ClimberのPC用3Dビューアにそのまま読み込めます。GPXは地図アプリ、CSVは表計算・解析、GeoJSONはGIS向けです。")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        ShareLink(item: RawRecordShare(url: entry.url),
+                                  preview: SharePreview(entry.originalName)) {
+                            Label("PCへ送る：元のJSON", systemImage: "square.and.arrow.up")
+                        }.buttonStyle(.borderedProminent)
+
+                        if let url = exportedFiles["gpx"] {
+                            ShareLink(item: GPXRecordShare(url: url),
+                                      preview: SharePreview(url.lastPathComponent)) {
+                                Label("GPXを共有", systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+                            }.buttonStyle(.bordered)
+                        }
+                        if let url = exportedFiles["csv"] {
+                            ShareLink(item: CSVRecordShare(url: url),
+                                      preview: SharePreview(url.lastPathComponent)) {
+                                Label("CSVを共有", systemImage: "tablecells")
+                            }.buttonStyle(.bordered)
+                        }
+                        if let url = exportedFiles["geojson"] {
+                            ShareLink(item: GeoJSONRecordShare(url: url),
+                                      preview: SharePreview(url.lastPathComponent)) {
+                                Label("GeoJSONを共有", systemImage: "globe")
+                            }.buttonStyle(.bordered)
+                        }
+                        if let exportError {
+                            Text("GPX/CSV出力に失敗: \(exportError)")
+                                .font(.footnote).foregroundStyle(.orange)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 } else if let errorMessage {
                     ContentUnavailableView("記録を開けません", systemImage: "exclamationmark.triangle",
                                            description: Text(errorMessage))
@@ -80,6 +111,15 @@ struct PhoneHikeHistoryDetailView: View {
                 let result = try HikeHistoryLibrary.read(entry)
                 record = result
                 selectedIndex = max(0, result.points.count-1)
+                do {
+                    let documents = FileManager.default.urls(for: .documentDirectory,
+                                                              in: .userDomainMask)[0]
+                    exportedFiles = try HikeRecordExports.save(result, under: documents)
+                    exportError = nil
+                } catch {
+                    exportedFiles = [:]
+                    exportError = error.localizedDescription
+                }
                 let options = [Terrain.load(named: "hanno"), Terrain.load(named: "goryu")].compactMap { $0 }
                 terrain = result.points.first.flatMap { first in
                     options.first { $0.grid(latitude: first.fix.latitude,

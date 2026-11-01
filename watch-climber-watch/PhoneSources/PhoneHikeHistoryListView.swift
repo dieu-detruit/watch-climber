@@ -135,6 +135,12 @@ struct PhoneHikeHistoryListView: View {
                     selectedHistory = entry
                 }
                 .buttonStyle(.bordered)
+                if entry.source == .phone {
+                    ShareLink(item: RawRecordShare(url: entry.url),
+                              preview: SharePreview(entry.originalName)) {
+                        Label("PCへJSON", systemImage: "square.and.arrow.up")
+                    }.buttonStyle(.bordered)
+                }
                 if entry.source == .watch && headline {
                     Button("iPhoneで続きを計測", systemImage: "arrow.right.circle") {
                         if let raw = transfer.received.first(where: { $0.url == entry.url }) {

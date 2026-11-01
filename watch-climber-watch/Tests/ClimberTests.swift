@@ -2,6 +2,27 @@ import XCTest
 @testable import WatchClimber
 
 final class ClimberTests: XCTestCase {
+    func testPCExportsPreserveSegmentsAndTimestamps() throws {
+        var hike = HikeRecord()
+        hike.resume(at: Date(timeIntervalSince1970: 1000))
+        hike.ingest(fix(1000))
+        hike.ingest(fix(1010, 137.7501, altitude: 2010))
+        hike.pause()
+        hike.resume(at: Date(timeIntervalSince1970: 1300))
+        hike.ingest(fix(1300, 137.7520, altitude: 2020))
+
+        let gpx = HikeRecordExports.gpx(hike)
+        XCTAssertEqual(gpx.components(separatedBy: "<trkseg>").count - 1, 2)
+        XCTAssertEqual(gpx.components(separatedBy: "<trkpt ").count - 1, 3)
+        XCTAssertTrue(gpx.contains("<ele>2010.00</ele>"))
+        let csv = HikeRecordExports.csv(hike)
+        XCTAssertEqual(csv.split(separator: "\n").count, 4)
+        XCTAssertTrue(csv.contains(",true\n"))
+        let geo = try JSONSerialization.jsonObject(with: HikeRecordExports.geoJSON(hike)) as? [String: Any]
+        XCTAssertEqual(geo?["type"] as? String, "FeatureCollection")
+        XCTAssertEqual((geo?["features"] as? [[String: Any]])?.count, 2)
+    }
+
     func testMountainSelectorKeepsBothOfflineDatasetsAndRoutes() throws {
         let hanno = try XCTUnwrap(Terrain.load(named: "hanno"))
         let goryu = try XCTUnwrap(Terrain.load(named: "goryu"))
