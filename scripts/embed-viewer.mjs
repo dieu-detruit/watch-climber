@@ -9,7 +9,10 @@ for (const match of Array.from(html.matchAll(/<script\b[^>]*\bsrc="([^"]+\.js)"[
   const src = match[1].replace(/^\.\//, "");
   if (src.includes("..") || !src.startsWith("assets/")) throw Error("Unsafe script path");
   const js = await readFile(base + "/" + src, "utf8");
-  html = html.replace(match[0], "<script type=\"module\">\n" +
+  // Use a replacement callback: the minified bundle includes html = html.replace(match[0], "<script type=\"module\">\n" +
+    js.replace(/<\/script/gi, "<\\/script") + "\n</script>"); tokens, which
+  // String.replace would otherwise interpolate as the matched <script> tag.
+  html = html.replace(match[0], () => "<script type=\"module\">\n" +
     js.replace(/<\/script/gi, "<\\/script") + "\n</script>");
   scriptCount++;
 }
@@ -17,7 +20,7 @@ for (const match of Array.from(html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]
   const src = match[0].match(/\bhref="([^"]+\.css)"/)?.[1]?.replace(/^\.\//, "");
   if (!src || src.includes("..") || !src.startsWith("assets/")) throw Error("Unexpected stylesheet path");
   const css = await readFile(base + "/" + src, "utf8");
-  html = html.replace(match[0], "<style>\n" + css + "\n</style>");
+  html = html.replace(match[0], () => "<style>\n" + css + "\n</style>");
   styleCount++;
 }
 if (scriptCount !== 1 || styleCount !== 1)
