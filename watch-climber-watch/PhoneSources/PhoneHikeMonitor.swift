@@ -149,7 +149,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func persist() {
-        guard canWrite else { return }
+        guard canWrite, record.state != .idle else { return }
         do {
             try write(record)
             lastSaved = Date()

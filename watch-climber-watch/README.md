@@ -80,3 +80,23 @@ and any imported Hanno GPX. Nothing is replaced when switching display areas.
 - The choice is retained independently on each device. "GPSで自動" uses a recent valid GPS fix inside one of the two bundled DEMs and defaults to Hanno when neither matches.
 - Manual selection works at home, without being physically near the mountain. Switching changes **only** the terrain and planned route being displayed, never recorded distance, time, altitude, heart rate, saved GPX, or existing JSON histories.
 
+
+## iPhone recorded hike history / Watch snapshot cleanup (2026-11-01)
+
+The iPhone's **記録** tab now shows iPhone recordings first, including `current-phone-hike.json`,
+completed `phone-hike-*.json` archives, and `phone-before-import-*.json` safety copies.
+Open a session using **見る** for read-only GPS track, elevation history, interactive 3D terrain
+overlay where DEM coverage exists, replay scrubbing, and sharing the original JSON.
+
+Watch snapshots are **grouped by HikeRecord UUID**, latest elapsed sample first.
+For example, 85 snapshots from one hike display as one session with a collapsed
+"以前のバックアップ 84件" section. No backup is deleted or re-encoded.
+Receiving many snapshots no longer places 85 identical filename rows on screen.
+
+**見る does not overwrite the current iPhone session.** A separate
+**iPhoneで続きを計測** action offers an explicit warning and backs up the
+current phone JSON before importing a Watch snapshot. Watch archives remain
+separate from iPhone originals.
+
+Do not uninstall the app to update from TestFlight: app-container JSON records can be lost.
+The history UI requires the latest native build and physical-device verification.

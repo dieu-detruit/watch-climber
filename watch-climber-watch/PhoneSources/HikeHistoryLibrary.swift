@@ -83,8 +83,10 @@ enum HikeHistoryLibrary {
     /// Validate the file at view time, not only when indexing, because it may have changed.
     static func read(_ entry: HikeHistoryEntry) throws -> HikeRecord {
         let bytes = try Data(contentsOf: entry.url)
-        guard bytes.count <= 40_000_000,
-              RecordExportFile.digest(bytes) == entry.digest else {
+        guard bytes.count <= 40_000_000 else { throw HikeContinuationError.invalidRecord }
+        // A current iPhone session changes every few seconds. Its snapshot index
+        // may be stale, but its hike UUID must remain stable and data must decode.
+        if !entry.isCurrentPhone && RecordExportFile.digest(bytes) != entry.digest {
             throw RecordExportError.integrityMismatch
         }
         let record = try JSONDecoder().decode(HikeRecord.self, from: bytes)

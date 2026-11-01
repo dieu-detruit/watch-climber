@@ -37,7 +37,6 @@ struct PhoneClimberView: View {
     @State private var tab: PhoneTab = .hike
     @State private var inspection = RouteInspection()
     @State private var confirmEnd = false
-    @State private var importFile: RecordExportFile?
     @State private var importError: String?
     @State private var showGPXImporter = false
 
@@ -54,28 +53,15 @@ struct PhoneClimberView: View {
                 .tabItem { Label("断面", systemImage: "chart.xyaxis.line") }.tag(PhoneTab.profile)
             NavigationStack { trackPage.navigationTitle("軌跡") }
                 .tabItem { Label("軌跡", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }.tag(PhoneTab.track)
-            NavigationStack { watchRecords.navigationTitle("Watchの記録") }
-                .tabItem { Label("Watch記録", systemImage: "applewatch") }.tag(PhoneTab.watchRecords)
+            NavigationStack {
+                PhoneHikeHistoryListView(monitor: monitor, transfer: transfer)
+                    .navigationTitle("登山の記録")
+            }
+                .tabItem { Label("記録", systemImage: "clock.arrow.circlepath") }.tag(PhoneTab.watchRecords)
         }
         .confirmationDialog("iPhoneで記録を終了しますか？", isPresented: $confirmEnd) {
             Button("終了して保存") { monitor.finish() }
             Button("キャンセル", role: .cancel) {}
-        }
-        .confirmationDialog("Watchの記録をiPhoneに引き継ぎますか？",
-                            isPresented: Binding(get: { importFile != nil }, set: { if !$0 { importFile = nil } })) {
-            Button("引き継ぐ") {
-                guard let selected = importFile else { return }
-                do {
-                    try monitor.importWatchRecord(selected)
-                    tab = .hike
-                } catch {
-                    importError = error.localizedDescription
-                }
-                importFile = nil
-            }
-            Button("キャンセル", role: .cancel) { importFile = nil }
-        } message: {
-            Text("まずWatchで記録を一時停止し、最新のJSONがiPhoneに保存されたことを確認してください。未転送分は引き継げません。")
         }
         .fileImporter(isPresented: $showGPXImporter,
                       allowedContentTypes: [.xml, .data, UTType(filenameExtension: "gpx") ?? .xml]) { result in
@@ -296,36 +282,5 @@ struct PhoneClimberView: View {
         }.padding()
     }
 
-    private var watchRecords: some View {
-        List {
-            Section {
-                Button("Watchから取り出す", systemImage: "applewatch") { transfer.requestExport() }
-                Text(transfer.status).font(.footnote)
-            } footer: {
-                Text("WatchとiPhoneの両方でアプリを開いてください。原本はWatchに残ります。")
-            }
-            Section("受信した記録（\(transfer.received.count)件）") {
-                ForEach(transfer.received) { file in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(file.originalName).font(.subheadline).textSelection(.enabled)
-                        if let date = (try? file.url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate {
-                            Text(date, format: .dateTime.year().month().day().hour().minute())
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Text("\(file.byteCount) bytes · SHA-256 \(file.sha256.prefix(12))…")
-                            .font(.caption).foregroundStyle(.secondary)
-                        HStack {
-                            ShareLink(item: RawRecordShare(url: file.url),
-                                      preview: SharePreview(file.originalName)) {
-                                Label("共有・保存", systemImage: "square.and.arrow.up")
-                            }
-                            Spacer()
-                            Button("引き継ぐ") { importFile = file }
-                                .disabled(monitor.record.state == .recording)
-                        }
-                    }.padding(.vertical, 4)
-                }
-            }
-        }
-    }
+
 }
