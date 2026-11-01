@@ -35,3 +35,68 @@ python3 watch-climber-watch/scripts/test-check-archive.py
 ```
 
 Those Python checks do not compile Swift or validate watchOS UI/runtime behavior. A fresh native simulator build/test and signed distribution are required before installing this update.
+
+## iPhone live recording and Watch handoff (2026-11-01 draft)
+
+The iPhone companion now offers independent real GPS altitude, elapsed time, horizontal distance, cumulative ascent, recorded trail, and start/pause/resume/finish. Background location updates run only while recording (permission required). A bundled 3D DEM view uses the same Goryu data as the Watch, but **does not cover Hanno**. The iPhone has no independent live heart-rate sensor, and the Watch's route inspection/landmark profile is not yet ported.
+
+For a battery-safe handoff, **pause the Watch recording first**. While the Watch is still powered, open both apps, use `Watchから取り出す`, wait for iPhone saved confirmation, then select the newest compatible JSON and tap `引き継ぐ`. The imported phone record remains paused until the user taps `記録再開`. The Watch raw JSON stays untouched; the phone archives any previous phone record before replacement, and a new GPS segment starts without drawing a false path across the transfer interval. If the Watch dies before the newest snapshot reaches the phone, that untransferred data cannot be recovered until the Watch can communicate again. There is no automatic real-time sync in this version.
+
+The iPhone record is saved atomically every ~10 seconds while foregrounded, on GPS updates, and on scene changes; iOS background location callbacks also persist it when delivered. Files named `current-phone-hike.json` and `phone-hike-*.json` are visible via Files/Watch Climber. Physical device tests must verify background execution and battery impact. This update has not been deployed to TestFlight and requires a successful iOS/watchOS simulator build and signed distribution.
+
+
+## Hanno (2026-11-01)
+
+Both the Watch and iPhone now package **real GSI DEM10B elevations for Hanno**, including the station, Azuma Gorge / Doremifa Bridge, Tounosuyama, Tenranzan and Miyazawako Onsen. The 5×5 z14 tile window at x=14530–14534, y=6439–6443 yields a 640×640 terrain grid at two-pixel stride, approximately 15 m spacing. Sources and SHA-256 hashes are saved in `public/terrain/hanno-sources.json` with original tiles in `hanno-tiles/`.
+
+Terrain switches automatically when GPS enters either bundled area (Hanno or Goryu). When GPS is unavailable, Hanno terrain appears by default. In Hanno, the 3D map displays landmark pins from cited geographic data, **not** a fabricated hiking trail.
+
+The itinerary source matches YAMAP activity https://yamap.com/activities/30004172 (10.7 km, 465 m ascent), but exact GPS track data is **not** in the source PDF screenshot. YAMAP requires Premium for downloading another user's GPX. Therefore the route polyline and elevation profile have not been invented. Other available Watch functions remain intact, including GPS elevation, ascent, distance, heart rate and recording.
+
+GSI sources: https://maps.gsi.go.jp/development/ichiran.html and https://maps.gsi.go.jp/development/demtile.html . Landmark georeferencing: Hanno Station/Onsen (MapFan), summit points (Zekkei.info), Doremifa Bridge (public geotagged hiking report, Yamakei Online).
+
+## Full iPhone/Watch parity (2026-11-01)
+
+The iPhone app now includes the following views, modelled on the Watch screens:
+
+- Status: live Core Location altitude, elapsed time, distance, cumulative ascent, and fresh Watch heart rate via WatchConnectivity (unavailable when Watch stops sending).
+- Offline 3D DEM (GSI): drag to rotate, pinch to zoom, tap an actual GPX/course line to inspect a position, slider to scrub; select GPS following again. Hanno and Goryu elevation data are bundled.
+- Planned route elevation profile: scrub with a finger or slider, jump between actual route landmarks, show live GPS position when matched.
+- Recorded elevation profile and GPS track, with gaps kept separate.
+- Start/pause/resume/finish and atomic local JSON record export, background GPS while recording.
+- Verified Watch JSON retrieval, manual handoff, automatic Watch snapshots about every two minutes, and iPhone import.
+- Import a Hanno GPX from Files on iPhone. The route is checked against the bundled Hanno DEM, saved offline, and transferred to the paired Watch using WatchConnectivity. Watch opens the same imported route while retaining its native Crown gestures.
+
+**Important:** Hanno's five landmark POIs and the GSI terrain are bundled, but a faithful trail line is not supplied by the schematic PDF. The actual activity trail requires a genuine GPX export from YAMAP or another trusted source. The app never joins those POIs into an invented walking trail. YAMAP may require premium membership to export another person's activity track. This feature has not yet been validated on physical paired devices. Install only after current Xcode checks and TestFlight distribution succeed.
+
+
+## Selecting a mountain (2026-11-01 update)
+
+Both devices include the Goryu DEM, Goryu planned-route profile, Hanno DEM,
+and any imported Hanno GPX. Nothing is replaced when switching display areas.
+
+- **Watch:** On the first status page, select the "山" button (or use "山を切り替える" on the recording controls page). Choose "GPSで自動", "飯能", or "五竜岳".
+- **iPhone:** On the status tab, select the "表示する山" section. The 3D and profile screens also include a mountain menu in the navigation bar.
+- The choice is retained independently on each device. "GPSで自動" uses a recent valid GPS fix inside one of the two bundled DEMs and defaults to Hanno when neither matches.
+- Manual selection works at home, without being physically near the mountain. Switching changes **only** the terrain and planned route being displayed, never recorded distance, time, altitude, heart rate, saved GPX, or existing JSON histories.
+
+
+## iPhone recorded hike history / Watch snapshot cleanup (2026-11-01)
+
+The iPhone's **記録** tab now shows iPhone recordings first, including `current-phone-hike.json`,
+completed `phone-hike-*.json` archives, and `phone-before-import-*.json` safety copies.
+Open a session using **見る** for read-only GPS track, elevation history, interactive 3D terrain
+overlay where DEM coverage exists, replay scrubbing, and sharing the original JSON.
+
+Watch snapshots are **grouped by HikeRecord UUID**, latest elapsed sample first.
+For example, 85 snapshots from one hike display as one session with a collapsed
+"以前のバックアップ 84件" section. No backup is deleted or re-encoded.
+Receiving many snapshots no longer places 85 identical filename rows on screen.
+
+**見る does not overwrite the current iPhone session.** A separate
+**iPhoneで続きを計測** action offers an explicit warning and backs up the
+current phone JSON before importing a Watch snapshot. Watch archives remain
+separate from iPhone originals.
+
+Do not uninstall the app to update from TestFlight: app-container JSON records can be lost.
+The history UI requires the latest native build and physical-device verification.

@@ -12,8 +12,10 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     @Published var saveMessage: String?
     @Published var starting = false
     @Published var finishing = false
-    let terrain = Terrain.load()
-    let route = PlannedRoute.load()
+    @Published var terrain: Terrain?
+    @Published var route: PlannedRoute?
+    @Published private(set) var mountainSelection = MountainSelection.load()
+    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
     private let location = CLLocationManager()
     private let health = HKHealthStore()
     private var workout: HKWorkoutSession?
@@ -32,6 +34,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     init(directory: URL) {
         storageURL = directory.appendingPathComponent("current-hike.json")
         super.init()
+        updateMountainDisplay()
         // Preserve the exact on-device bytes before restore changes state or any
         // scene/timer callback can save. A failed backup must never permit writes.
         do {
@@ -63,6 +66,32 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
         }
     }
 
+    func refreshRoute() {
+        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
+    }
+
+    /// Changing the display area never touches current-hike.json or recorded samples.
+    func chooseMountain(_ selection: MountainSelection) {
+        mountainSelection = selection
+        selection.save()
+        updateMountainDisplay()
+    }
+
+    private func updateMountainDisplay() {
+        guard let chosen = mountainSelection.terrain(from: terrainOptions, fix: fix) else { return }
+        if chosen.name != terrain?.name {
+            terrain = chosen
+            refreshRoute()
+        } else if route == nil {
+            refreshRoute()
+        }
+    }
+
+    private func selectTerrain(for fix: Fix) {
+        guard mountainSelection == .automatic, fix.usable else { return }
+        updateMountainDisplay()
+    }
+
     func requestLocation() {
         switch location.authorizationStatus {
         case .notDetermined: location.requestWhenInUseAuthorization()
@@ -85,6 +114,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
                                altitude: value.verticalAccuracy >= 0 && value.verticalAccuracy <= 50 ? value.altitude : nil,
                                accuracy: value.horizontalAccuracy)
                 self.fix = next
+                self.selectTerrain(for: next)
                 self.locationMessage = next.usable ? "GPS" : "GPS精度不足"
                 self.record.ingest(next)
             }

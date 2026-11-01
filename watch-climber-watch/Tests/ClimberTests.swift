@@ -2,6 +2,56 @@ import XCTest
 @testable import WatchClimber
 
 final class ClimberTests: XCTestCase {
+    func testPCExportsPreserveSegmentsAndTimestamps() throws {
+        var hike = HikeRecord()
+        hike.resume(at: Date(timeIntervalSince1970: 1000))
+        hike.ingest(fix(1000))
+        hike.ingest(fix(1010, 137.7501, altitude: 2010))
+        hike.pause()
+        hike.resume(at: Date(timeIntervalSince1970: 1300))
+        hike.ingest(fix(1300, 137.7520, altitude: 2020))
+
+        let gpx = HikeRecordExports.gpx(hike)
+        XCTAssertEqual(gpx.components(separatedBy: "<trkseg>").count - 1, 2)
+        XCTAssertEqual(gpx.components(separatedBy: "<trkpt ").count - 1, 3)
+        XCTAssertTrue(gpx.contains("<ele>2010.00</ele>"))
+        let csv = HikeRecordExports.csv(hike)
+        XCTAssertEqual(csv.split(separator: "\n").count, 4)
+        XCTAssertTrue(csv.contains(",true\n"))
+        let geo = try JSONSerialization.jsonObject(with: HikeRecordExports.geoJSON(hike)) as? [String: Any]
+        XCTAssertEqual(geo?["type"] as? String, "FeatureCollection")
+        XCTAssertEqual((geo?["features"] as? [[String: Any]])?.count, 2)
+    }
+
+    func testMountainSelectorKeepsBothOfflineDatasetsAndRoutes() throws {
+        let hanno = try XCTUnwrap(Terrain.load(named: "hanno"))
+        let goryu = try XCTUnwrap(Terrain.load(named: "goryu"))
+        let options = [hanno, goryu]
+        let nearHanno = Fix(date: Date(), latitude: 35.861956,
+                            longitude: 139.308293, altitude: 200, accuracy: 5)
+        let nearGoryu = Fix(date: Date(), latitude: 36.65,
+                            longitude: 137.75, altitude: 2000, accuracy: 5)
+
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nearHanno)?.name, hanno.name)
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nearGoryu)?.name, goryu.name)
+        XCTAssertEqual(MountainSelection.hanno.terrain(from: options, fix: nearGoryu)?.name, hanno.name)
+        XCTAssertEqual(MountainSelection.goryu.terrain(from: options, fix: nearHanno)?.name, goryu.name)
+        XCTAssertEqual(MountainSelection.automatic.terrain(from: options, fix: nil)?.name, hanno.name)
+        XCTAssertNotNil(PlannedRoute.load(), "Goryu route must remain bundled")
+    }
+
+    func testBundledHannoTerrainCoversAllItineraryLandmarks() throws {
+        let terrain = try XCTUnwrap(Terrain.load(named: "hanno"))
+        XCTAssertEqual(terrain.columns, 640)
+        XCTAssertEqual(terrain.rows, 640)
+        XCTAssertEqual(terrain.heights.count, 640 * 640)
+        for landmark in HannoLandmarks.ordered {
+            let grid = try XCTUnwrap(terrain.grid(latitude: landmark.latitude, longitude: landmark.longitude),
+                                     "Missing \(landmark.name)")
+            XCTAssertNotNil(terrain.height(x: grid.x, y: grid.y), "No DEM at \(landmark.name)")
+        }
+    }
+
     func testActualDEMPixelCoordinates() throws {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "goryu", withExtension: "json"))
         let terrain = try JSONDecoder().decode(Terrain.self, from: Data(contentsOf: url))
@@ -98,4 +148,26 @@ final class ClimberTests: XCTestCase {
         XCTAssertEqual(restored.elapsed, 0)
         XCTAssertEqual(restored.distance, 0)
     }
+    func testWatchSnapshotContinuesOnPhoneWithoutBridgingGap() throws {
+        var source = HikeRecord()
+        source.resume(at: Date(timeIntervalSince1970: 100))
+        source.ingest(fix(100))
+        source.ingest(fix(110, 137.7501, altitude: 2005))
+        let originalDistance = source.distance
+        let originalID = source.id
+        var imported = try HikeContinuation.restore(JSONEncoder().encode(source))
+        XCTAssertEqual(imported.id, originalID)
+        XCTAssertEqual(imported.state, .paused)
+        imported.resume(at: Date(timeIntervalSince1970: 1000))
+        imported.ingest(fix(1000, 137.76))
+        XCTAssertEqual(imported.distance, originalDistance)
+        XCTAssertTrue(imported.points.last!.breakBefore)
+    }
+
+    func testCompletedWatchSnapshotIsNotImportable() throws {
+        var finished = HikeRecord()
+        finished.state = .finished
+        XCTAssertThrowsError(try HikeContinuation.restore(JSONEncoder().encode(finished)))
+    }
+
 }

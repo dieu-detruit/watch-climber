@@ -81,7 +81,7 @@ struct TerrainView: View {
                                       sensitivity: .low, isContinuous: crownMode == .rotate,
                                       isHapticFeedbackEnabled: true)
             Text(status).font(.system(size: 9)).foregroundStyle(.secondary)
-            Text("\(meshSpacing)m · 国土地理院 DEM10B / YAMAP").font(.system(size: 8)).foregroundStyle(.secondary)
+            Text("\(meshSpacing)m · 国土地理院 DEM10B").font(.system(size: 8)).foregroundStyle(.secondary)
         }
         .onAppear {
             if route == nil && crownMode == .inspect { crownMode = .rotate }
@@ -134,7 +134,8 @@ struct TerrainView: View {
                 var path = Path()
                 path.addLines(triangle.points)
                 path.closeSubpath()
-                let level = min(1, max(0, (triangle.height-700)/2200))
+                let range = max(20, terrain.heightRange[1] - terrain.heightRange[0])
+                let level = min(1, max(0, (triangle.height - terrain.heightRange[0]) / range))
                 context.fill(path, with: .color(Color(hue: 0.43-level*0.12, saturation: 0.5-level*0.25, brightness: 0.28+level*0.5)))
                 context.stroke(path, with: .color(.black.opacity(0.16)), lineWidth: 0.3)
             }
@@ -178,6 +179,19 @@ struct TerrainView: View {
                     context.draw(Text(name).font(.system(size: 9)).foregroundColor(.white), at: CGPoint(x: x, y: y))
                 }
             }
+            // Grounded places only: these points are NOT a walking trail.
+            if terrain.name.hasPrefix("飯能") {
+                for landmark in HannoLandmarks.ordered {
+                    guard let p = terrain.grid(latitude: landmark.latitude, longitude: landmark.longitude),
+                          abs(p.x - center.0) < radius, abs(p.y - center.1) < radius,
+                          let height = terrain.height(x: p.x, y: p.y) else { continue }
+                    let projected = project(p.x, p.y, height).point
+                    let dot = Path(ellipseIn: CGRect(x: projected.x-3, y: projected.y-3, width: 6, height: 6))
+                    context.fill(dot, with: .color(.orange))
+                    context.draw(Text(landmark.shortName).font(.system(size: 8)).foregroundColor(.white),
+                                 at: CGPoint(x: projected.x, y: projected.y-10))
+                }
+            }
             if let p = inspectedPosition, let height = terrain.height(x: p.x, y: p.y) {
                 let point = project(p.x, p.y, height).point
                 let marker = Path(ellipseIn: CGRect(x: point.x - 5, y: point.y - 5, width: 10, height: 10))
@@ -197,6 +211,6 @@ struct TerrainView: View {
             context.stroke(north, with: .color(.white), lineWidth: 2)
             context.draw(Text("N").font(.system(size: 9)), at: CGPoint(x: end.x, y: end.y-7))
         }
-        .accessibilityLabel("五竜の3D地形。\(status)。Digital Crownで\(crownMode.label)")
+        .accessibilityLabel("\(terrain.name)の3D地形。\(status)。Digital Crownで\(crownMode.label)")
     }
 }
