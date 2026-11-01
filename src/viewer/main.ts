@@ -22,6 +22,16 @@ function message(text: string, error = false) {
 }
 const slider = el<HTMLInputElement>("position"),
   fileInput = el<HTMLInputElement>("file");
+type Region = "hanno" | "goryu";
+const regions: Region[] = ["hanno", "goryu"];
+const regionLabels: Record<Region, string> = {
+  hanno: "飯能・多峯主山・天覧山",
+  goryu: "五竜岳",
+};
+const datasets = new Map<Region, Terrain>();
+let currentRegion: Region = "hanno";
+let terrainMesh: THREE.Mesh | null = null;
+let lightsAdded = false;
 let terrain: Terrain,
   track: Track | null = null,
   exaggeration = 1,
@@ -129,7 +139,7 @@ function rebuildRoute() {
   const outside = track.points.length - inCount;
   message(
     inCount === 0
-      ? "記録はすべて地形データの範囲外です。五竜岳周辺の記録を選んでください。"
+      ? "記録はすべて表示中の地形範囲外です。地形の選択を確認してください。"
       : `${inCount.toLocaleString()}点を表示 · 経路は地表に沿って表示${outside ? ` · 範囲外／標高欠損 ${outside}点は非表示` : ""}${track.skipped ? ` · 無効な座標 ${track.skipped}点を除外` : ""}`,
     inCount === 0,
   );
@@ -270,20 +280,59 @@ function installTrack(next: Track) {
   rebuildRoute();
   resize();
 }
-async function loadFile(file: File) {
-  if (!terrain) {
-    message("地形の読み込み完了後に選択してください。", true);
-    return;
+async function readTerrain(region: Region): Promise<Terrain> {
+  const cached = datasets.get(region);
+  if (cached) return cached;
+  const embedded = document.getElementById(`terrain-${region}`)?.textContent;
+  let data: unknown;
+  if (embedded) {
+    data = JSON.parse(embedded);
+  } else {
+    const response = await fetch(new URL(`./terrain/${region}.json`, document.baseURI));
+    if (!response.ok) throw Error(`${regionLabels[region]}の標高データを読み込めません。`);
+    data = await response.json();
   }
+  if (!validTerrain(data)) throw Error("地形データが壊れているか形式が不正です。");
+  datasets.set(region, data);
+  return data;
+}
+
+async function switchRegion(region: Region) {
+  terrain = await readTerrain(region);
+  currentRegion = region;
+  el<HTMLSelectElement>("terrain-area").value = region;
+  el("area-title").textContent = regionLabels[region];
+  el("area-subtitle").textContent = region === "hanno"
+    ? "飯能駅・吾妻峡・多峯主山・天覧山・宮沢湖周辺"
+    : "五竜岳周辺の高山地形";
+  createTerrain();
+  if (track) rebuildRoute();
+  else fitTrack();
+}
+
+async function chooseRegionForTrack(next: Track) {
+  const areas = await Promise.all(regions.map(async (region) => ({
+    region,
+    data: await readTerrain(region),
+  })));
+  const counts = areas.map(({region,data}) => ({
+    region,
+    inside: next.points.filter((p) => gridPosition(data,p.latitude,p.longitude) !== null).length,
+  }));
+  const best = counts.sort((a,b) => b.inside-a.inside)[0];
+  if (best.inside > 0 && currentRegion !== best.region)
+    await switchRegion(best.region);
+}
+
+async function loadFile(file: File) {
   try {
     if (file.size > 30 * 1024 * 1024)
       throw Error("ファイルは30MB以下にしてください。");
-    installTrack(parseTrack(await file.text(), file.name));
+    const next = parseTrack(await file.text(), file.name);
+    await chooseRegionForTrack(next);
+    installTrack(next);
   } catch (error) {
-    message(
-      error instanceof Error ? error.message : "記録を読み込めません。",
-      true,
-    );
+    message(error instanceof Error ? error.message : "記録を読み込めません。", true);
   }
 }
 function resize() {
@@ -330,8 +379,10 @@ function createTerrain() {
         h = t.heights[ys[j] * t.columns + xs[i]],
         v = h ?? 0;
       vertices.set([xs[i] * sx - width / 2, v, ys[j] * sz - depth / 2], k * 3);
-      const c =
-        v < 1800
+      const c = currentRegion === "hanno"
+        ? forest.clone().lerp(alpine, Math.max(0,Math.min(1,
+            (v - t.heightRange[0]) / Math.max(60, t.heightRange[1] - t.heightRange[0]))))
+        : v < 1800
           ? forest.clone().lerp(alpine, Math.max(0, (v - 950) / 850))
           : v < 2450
             ? alpine.clone().lerp(rock, (v - 1800) / 650)
@@ -356,21 +407,24 @@ function createTerrain() {
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
-  world.add(
-    new THREE.Mesh(
-      geometry,
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 1,
-        metalness: 0,
-        side: THREE.DoubleSide,
-      }),
-    ),
-  );
-  scene.add(new THREE.HemisphereLight(0xf2f5eb, 0x577367, 2.1));
-  const sun = new THREE.DirectionalLight(0xfff2d1, 2.6);
-  sun.position.set(-5000, 10000, 6000);
-  scene.add(sun);
+  if (terrainMesh) {
+    world.remove(terrainMesh);
+    terrainMesh.geometry.dispose();
+    const material = terrainMesh.material;
+    if (Array.isArray(material)) material.forEach((m) => m.dispose());
+    else material.dispose();
+  }
+  terrainMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 1, metalness: 0, side: THREE.DoubleSide,
+  }));
+  world.add(terrainMesh);
+  if (!lightsAdded) {
+    scene.add(new THREE.HemisphereLight(0xf2f5eb, 0x577367, 2.1));
+    const sun = new THREE.DirectionalLight(0xfff2d1, 2.6);
+    sun.position.set(-5000, 10000, 6000);
+    scene.add(sun);
+    lightsAdded = true;
+  }
 }
 async function init() {
   try {
@@ -400,24 +454,16 @@ async function init() {
       message("3D描画が中断されました。ページを再読み込みしてください。", true);
     });
     resize();
-    const response = await fetch(
-      new URL("./terrain/goryu.json", document.baseURI),
-    );
-    if (!response.ok) throw Error("地形データの取得に失敗しました。");
-    const data = await response.json();
-    if (!validTerrain(data)) throw Error("地形データの形式が不正です。");
-    terrain = data;
-    createTerrain();
-    fitTrack();
-    message("地形のみ表示 · GPX／記録JSONを選んで経路を追加");
+    await switchRegion("hanno");
+    message("飯能の地形を表示中 · iPhone/WatchのJSONかGPXを選択");
     const initial = document.documentElement.dataset.record;
     if (initial) {
       try {
         const r = await fetch(new URL(initial, document.baseURI));
         if (!r.ok) throw Error("記録の取得に失敗しました。");
-        installTrack(
-          parseTrack(await r.text(), "五竜岳 · 2026年10月10–11日.json"),
-        );
+        const imported = parseTrack(await r.text(), "登山記録.json");
+        await chooseRegionForTrack(imported);
+        installTrack(imported);
       } catch (e) {
         message(e instanceof Error ? e.message : "記録を開けません。", true);
       }
@@ -509,8 +555,14 @@ el("clear").addEventListener("click", () => {
   el("empty").hidden = false;
   el("loaded").hidden = true;
   el("app").classList.remove("has-track");
-  message("地形のみ表示 · GPX／記録JSONを選んで経路を追加");
+  message(`${regionLabels[currentRegion]}の地形を表示中 · GPX／記録JSONを選択`);
   fitTrack();
+});
+el<HTMLSelectElement>("terrain-area").addEventListener("change", () => {
+  const selected = el<HTMLSelectElement>("terrain-area").value as Region;
+  void switchRegion(selected).catch((error) => message(
+    error instanceof Error ? error.message : "地形を切り替えられません。", true,
+  ));
 });
 window.addEventListener("resize", resize);
 document.addEventListener("visibilitychange", () => {

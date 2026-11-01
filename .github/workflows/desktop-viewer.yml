@@ -1,0 +1,42 @@
+name: Desktop hike viewer
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/viewer/**"
+      - "viewer/**"
+      - "src/terrain.ts"
+      - "scripts/*viewer*"
+      - "package*.json"
+      - ".github/workflows/desktop-viewer.yml"
+  push:
+    branches: [feature/iphone-hike-fallback-20261101]
+    paths:
+      - "src/viewer/**"
+      - "viewer/**"
+      - "scripts/*viewer*"
+      - ".github/workflows/desktop-viewer.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:viewer:portable
+      - name: Upload fully offline self-contained HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-climber-pc-offline
+          path: dist-viewer/watch-climber-pc-offline.html
+          retention-days: 30
+          if-no-files-found: error

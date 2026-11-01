@@ -9,13 +9,13 @@
     <meta name="theme-color" content="#132a29" />
     <meta
       name="description"
-      content="五竜岳の3D地形に、GPXやWatch Climberの登山記録を重ねて振り返るビューア。記録は端末内で処理します。"
+      content="飯能と五竜岳の3D地形にiPhone・Watch Climberの登山記録JSON/GPXを重ねるPCビューア。ファイルは端末内だけで処理します。"
     />
-    <title>五竜岳 3D | Watch Climber</title>
+    <title>登山記録 3D ビューア | Watch Climber</title>
   </head>
   <body>
     <div id="app">
-      <div id="scene" aria-label="五竜岳周辺の3D地形"></div>
+      <div id="scene" aria-label="飯能・五竜岳の3D地形"></div>
       <header>
         <div class="brand">
           <span class="mountain">△</span> WATCH CLIMBER
@@ -23,9 +23,9 @@
         </div>
         <div class="heading">
           <div>
-            <p class="eyebrow">NORTHERN JAPAN ALPS</p>
-            <h1>五竜岳<span>2,814 m</span></h1>
-            <p class="sub">歩いた道を、立体で振り返る。</p>
+            <p class="eyebrow">YOUR ACTUAL HIKING RECORD</p>
+            <h1 id="area-title">飯能・多峯主山・天覧山</h1>
+            <p class="sub" id="area-subtitle">飯能駅・吾妻峡・多峯主山・天覧山・宮沢湖周辺</p>
           </div>
           <button id="open" class="primary">＋ 記録を開く</button>
         </div>
@@ -39,6 +39,12 @@
         ><button id="north" title="北を上に">N ↑</button>
       </div>
       <div class="settings">
+        <label>表示地形
+          <select id="terrain-area" aria-label="表示する山">
+            <option value="hanno">飯能・多峯主山・天覧山</option>
+            <option value="goryu">五竜岳</option>
+          </select>
+        </label>
         <label
           >高さ <output id="ex-label">1.0×</output
           ><input
@@ -53,10 +59,11 @@
       </div>
       <section id="panel">
         <div id="empty">
-          <span class="eyebrow">YOUR NEXT PERSPECTIVE</span>
+          <span class="eyebrow">YOUR IPHONE / WATCH RECORD</span>
           <h2>登山記録を重ねよう</h2>
           <p>
-            GPX または Watch Climber の記録JSONを選択。<br />ファイルは端末内だけで処理されます。
+            iPhoneで記録した <code>current-phone-hike.json</code>、<br />
+            またはWatchのJSON／GPXを選択。<br />記録ファイルは端末内だけで処理し、サーバーに送信しません。
           </p>
           <button id="open-empty" class="primary">ファイルを選ぶ ↗</button>
         </div>

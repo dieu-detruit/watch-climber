@@ -17,3 +17,10 @@ The DEM and coordinate conversion are reused from `public/terrain/goryu.json` an
 ## Validation
 
 `npm test` and `npm run build:viewer`. Imports cover Swift dates, pause boundaries, namespaced GPX, missing elevations, invalid coordinates and terrain boundaries. iPhone hardware/Safari must still be checked on a real device; a build or desktop-browser check does not establish that.
+
+
+## iPhone & Hanno support
+
+The viewer now imports any Watch Climber HikeRecord JSON produced by **either iPhone or Watch** (including `current-phone-hike.json`). It automatically selects bundled Hanno or Goryu GSI elevation data from actual GPS coordinates and supports manual region switching. It shows the recorded GPS track, recorded altitude profile, cumulative ascent, distance, playback and point timestamps. Gaps remain gaps. No planned routes are substituted for recorded GPS positions.
+
+The downloadable `watch-climber-pc-offline.html` bundles both DEMs and JavaScript. On a PC, open the HTML in a modern WebGL-capable browser and choose the exported JSON. The file is parsed in the browser without uploading any GPS track. No installation is necessary. The HTML file is produced by `npm run build:viewer:portable`; CI provides it as a workflow artifact.

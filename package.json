@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "preview": "vite preview",
-    "build:viewer": "tsc -b && vite build --config vite.viewer.config.ts && node scripts/package-viewer.mjs"
+    "build:viewer": "tsc -b && vite build --config vite.viewer.config.ts && node scripts/package-viewer.mjs",
+    "build:viewer:portable": "npm run build:viewer && node scripts/embed-viewer.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
