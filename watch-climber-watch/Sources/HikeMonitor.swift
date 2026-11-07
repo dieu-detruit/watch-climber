@@ -15,7 +15,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     @Published var terrain: Terrain?
     @Published var route: PlannedRoute?
     @Published private(set) var mountainSelection = MountainSelection.load()
-    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
+    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load(), Terrain.load(named: "amagi")].compactMap { $0 }
     private let location = CLLocationManager()
     private let health = HKHealthStore()
     private var workout: HKWorkoutSession?
@@ -67,7 +67,7 @@ final class HikeMonitor: NSObject, ObservableObject, CLLocationManagerDelegate, 
     }
 
     func refreshRoute() {
-        route = terrain?.name.hasPrefix("五竜") == true ? PlannedRoute.load() : ImportedRouteStore.load()
+        route = PlannedRoute.load(for: terrain)
     }
 
     /// Changing the display area never touches current-hike.json or recorded samples.

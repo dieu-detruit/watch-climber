@@ -2,7 +2,7 @@ import Foundation
 
 /// View selection only. Never resets or writes hike records.
 enum MountainSelection: String, CaseIterable, Identifiable {
-    case automatic, hanno, goryu
+    case automatic, hanno, goryu, amagi
 
     static let preferenceKey = "watchclimber.selected-mountain"
 
@@ -12,6 +12,7 @@ enum MountainSelection: String, CaseIterable, Identifiable {
         case .automatic: return "GPSで自動"
         case .hanno: return "飯能"
         case .goryu: return "五竜岳"
+        case .amagi: return "天城山"
         }
     }
 
@@ -30,9 +31,11 @@ enum MountainSelection: String, CaseIterable, Identifiable {
     func terrain(from options: [Terrain], fix: Fix?, now: Date = Date()) -> Terrain? {
         let hanno = options.first { $0.name.hasPrefix("飯能") }
         let goryu = options.first { $0.name.hasPrefix("五竜") }
+        let amagi = options.first { $0.name.hasPrefix("天城") }
         switch self {
         case .hanno: return hanno
         case .goryu: return goryu
+        case .amagi: return amagi
         case .automatic:
             if let fix, fix.usable,
                now.timeIntervalSince(fix.date) >= -5,

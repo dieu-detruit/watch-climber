@@ -100,3 +100,9 @@ separate from iPhone originals.
 
 Do not uninstall the app to update from TestFlight: app-container JSON records can be lost.
 The history UI requires the latest native build and physical-device verification.
+
+## 天城山 シャクナゲコース
+
+山の切り替えで「天城山」を選ぶと、天城高原駐車場から万二郎岳・馬の背・石楠立・万三郎岳・涸沢分岐点を回る計画ルートを表示します。iPhoneとWatchの両方に地形・ルートを同梱し、通信なしで3D地形・先読み・標高断面を利用できます。飯能・五竜岳と既存の記録は残ります。GPSで自動を選ぶと、天城山の収録範囲内で新しい有効な位置を取得した際に切り替わります。
+
+地形は国土地理院DEM10B、ルートは指定されたYAMAP計画の座標と標高を順序どおり収録。計画の個人情報・共有コードは同梱しません。計画線は現地の通行可否を保証するものではなく、GPS精度や同じ道の往復区間により進捗位置が曖昧になる場合があります。

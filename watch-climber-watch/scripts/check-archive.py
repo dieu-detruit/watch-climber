@@ -50,4 +50,34 @@ for landmark in route['landmarks']:
     assert 0 <= landmark['pointIndex'] < len(route['points'])
 assert any(p['name'] == '五竜岳' for p in route['landmarks'])
 assert any(p['name'] == '五竜山荘テント場' for p in route['landmarks'])
+for app in (watch, container):
+    amagi = json.loads((app / 'amagi.json').read_text())
+    assert amagi['name'].startswith('天城')
+    assert amagi['columns'] >= 2 and amagi['rows'] >= 2
+    assert len(amagi['heights']) == amagi['columns'] * amagi['rows']
+    assert amagi['missingCells'] == sum(h is None for h in amagi['heights'])
+    assert amagi['missingCells'] < len(amagi['heights']) * 0.4
+    course = json.loads((app / 'amagi-course.json').read_text())
+    assert set(course) == {'id', 'name', 'sourceUrl', 'distanceM', 'ascentM', 'descentM', 'points', 'landmarks', 'attribution'}
+    assert course['id'] == 'amagi-shakunage'
+    assert course['name'] == '天城山 シャクナゲコース'
+    assert len(course['points']) == 366 and len(course['landmarks']) == 12
+    assert course['points'][0] == course['points'][-1]
+    assert [p['pointIndex'] for p in course['landmarks']] == sorted(p['pointIndex'] for p in course['landmarks'])
+    for point in course['points'] + [p['position'] for p in course['landmarks']]:
+        assert set(point) == {'latitude', 'longitude', 'altitude'}
+        assert amagi['bounds']['south'] <= point['latitude'] <= amagi['bounds']['north']
+        assert amagi['bounds']['west'] <= point['longitude'] <= amagi['bounds']['east']
+        assert isinstance(point['altitude'], (int, float)) and math.isfinite(point['altitude'])
+        bounds = amagi['bounds']
+        mercator = lambda lat: math.asinh(math.tan(math.radians(lat)))
+        x = (point['longitude'] - bounds['west']) / (bounds['east'] - bounds['west']) * (amagi['columns'] - 1)
+        y = (mercator(bounds['north']) - mercator(point['latitude'])) / (mercator(bounds['north']) - mercator(bounds['south'])) * (amagi['rows'] - 1)
+        x0, y0 = math.floor(x), math.floor(y)
+        for row in (y0, min(y0 + 1, amagi['rows'] - 1)):
+            for column in (x0, min(x0 + 1, amagi['columns'] - 1)):
+                assert amagi['heights'][row * amagi['columns'] + column] is not None
+    for landmark in course['landmarks']:
+        assert set(landmark) == {'name', 'pointIndex', 'position'}
+        assert 0 <= landmark['pointIndex'] < len(course['points'])
 print('iPhone/Watch executables, companion association, independent recording, privacy and offline resources verified')

@@ -77,10 +77,19 @@ struct PlannedRoute: Decodable {
         totalM = total
     }
 
-    static func load() -> PlannedRoute? {
-        guard let url = Bundle.main.url(forResource: "goryu-course", withExtension: "json"),
+    static func load(named resource: String = "goryu-course") -> PlannedRoute? {
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "json"),
               let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(PlannedRoute.self, from: data)
+    }
+
+    /// Select the plan for the displayed terrain, never an unrelated imported GPX.
+    static func load(for terrain: Terrain?) -> PlannedRoute? {
+        guard let terrain else { return nil }
+        if terrain.name.hasPrefix("五竜") { return load() }
+        if terrain.name.hasPrefix("天城") { return load(named: "amagi-course") }
+        if terrain.name.hasPrefix("飯能") { return ImportedRouteStore.load() }
+        return nil
     }
 
     private static func distance(_ a: RoutePoint, _ b: RoutePoint) -> Double {
