@@ -9,7 +9,7 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
     @Published private(set) var terrain: Terrain?
     @Published private(set) var route: PlannedRoute?
     @Published private(set) var mountainSelection = MountainSelection.load()
-    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load()].compactMap { $0 }
+    private lazy var terrainOptions = [Terrain.load(named: "hanno"), Terrain.load(), Terrain.load(named: "amagi")].compactMap { $0 }
     @Published private(set) var locationStatus = "位置情報を確認中"
     @Published private(set) var saveError: String?
     @Published private(set) var infoMessage: String?
@@ -64,9 +64,9 @@ final class PhoneHikeMonitor: NSObject, ObservableObject, CLLocationManagerDeleg
         guard let chosen = mountainSelection.terrain(from: terrainOptions, fix: fix) else { return }
         if chosen.name != terrain?.name {
             terrain = chosen
-            route = chosen.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
+            route = PlannedRoute.load(for: chosen)
         } else if route == nil {
-            route = chosen.name.hasPrefix("五竜") ? PlannedRoute.load() : ImportedRouteStore.load()
+            route = PlannedRoute.load(for: chosen)
         }
     }
 

@@ -120,7 +120,7 @@ struct PhoneHikeHistoryDetailView: View {
                     exportedFiles = [:]
                     exportError = error.localizedDescription
                 }
-                let options = [Terrain.load(named: "hanno"), Terrain.load(named: "goryu")].compactMap { $0 }
+                let options = [Terrain.load(named: "hanno"), Terrain.load(named: "goryu"), Terrain.load(named: "amagi")].compactMap { $0 }
                 terrain = result.points.first.flatMap { first in
                     options.first { $0.grid(latitude: first.fix.latitude,
                                             longitude: first.fix.longitude) != nil }

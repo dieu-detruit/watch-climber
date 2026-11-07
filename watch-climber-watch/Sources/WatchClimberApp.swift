@@ -79,6 +79,7 @@ struct ClimberView: View {
             Button("GPSで自動") { changeMountain(.automatic) }
             Button("飯能") { changeMountain(.hanno) }
             Button("五竜岳") { changeMountain(.goryu) }
+            Button("天城山") { changeMountain(.amagi) }
             Button("キャンセル", role: .cancel) {}
         }
         .confirmationDialog("記録を終了しますか？", isPresented: $confirmEnd) {

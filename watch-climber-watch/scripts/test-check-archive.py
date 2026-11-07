@@ -37,6 +37,12 @@ class ArchiveChecks(unittest.TestCase):
                 'name': '飯能周辺', 'columns': 640, 'rows': 640,
                 'missingCells': 0, 'heights': [100.0] * (640 * 640)
             }))
+            (app / 'amagi.json').write_text(json.dumps({
+                'name': '天城山周辺', 'columns': 2, 'rows': 2,
+                'missingCells': 0, 'heights': [1000.0] * 4,
+                'bounds': {'west': 138.9, 'east': 139.1, 'south': 34.8, 'north': 34.9}
+            }))
+            (app / 'amagi-course.json').write_bytes((ROOT / 'watch-climber-watch/Resources/amagi-course.json').read_bytes())
         if route:
             (watch / 'goryu-course.json').write_bytes((ROOT / 'watch-climber-watch/Resources/goryu-course.json').read_bytes())
         return watch
@@ -53,6 +59,34 @@ class ArchiveChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             self.make_archive(root)
             self.assertEqual(self.check(root).returncode, 0)
+
+    def test_amagi_resources_are_required_in_both_apps(self):
+        for target in ('phone', 'watch'):
+            for name in ('amagi.json', 'amagi-course.json'):
+                with self.subTest(target=target, name=name), tempfile.TemporaryDirectory() as root:
+                    watch = self.make_archive(root)
+                    app = watch if target == 'watch' else watch.parent.parent
+                    (app / name).unlink()
+                    self.assertNotEqual(self.check(root).returncode, 0)
+
+    def test_amagi_missing_elevation_on_route_is_rejected(self):
+        with tempfile.TemporaryDirectory() as root:
+            watch = self.make_archive(root)
+            path = watch / 'amagi.json'
+            terrain = json.loads(path.read_text())
+            terrain['heights'][0] = None
+            terrain['missingCells'] = 1
+            path.write_text(json.dumps(terrain))
+            self.assertNotEqual(self.check(root).returncode, 0)
+
+    def test_private_amagi_plan_metadata_is_rejected(self):
+        with tempfile.TemporaryDirectory() as root:
+            watch = self.make_archive(root)
+            path = watch.parent.parent / 'amagi-course.json'
+            course = json.loads(path.read_text())
+            course['shareCode'] = 'private fixture'
+            path.write_text(json.dumps(course))
+            self.assertNotEqual(self.check(root).returncode, 0)
 
     def test_missing_phone_executable_is_rejected(self):
         with tempfile.TemporaryDirectory() as root:

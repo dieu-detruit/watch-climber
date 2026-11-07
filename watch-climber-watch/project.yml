@@ -20,6 +20,8 @@ targets:
         buildPhase: resources
       - path: ../public/terrain/hanno.json
         buildPhase: resources
+      - path: ../public/terrain/amagi.json
+        buildPhase: resources
     info:
       path: Generated/Watch-Info.plist
       properties:
@@ -70,7 +72,10 @@ targets:
         buildPhase: resources
       - path: ../public/terrain/hanno.json
         buildPhase: resources
+      - path: ../public/terrain/amagi.json
+        buildPhase: resources
       - Resources/goryu-course.json
+      - Resources/amagi-course.json
     info:
       path: Generated/Container-Info.plist
       properties:
